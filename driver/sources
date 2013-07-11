@@ -1,0 +1,24 @@
+TARGETNAME=kmon
+TARGETPATH=..\build
+TARGETTYPE=DRIVER
+TRANSPORT_PATH = ..\transport
+
+INCLUDES=.\inc;.\h;$(TRANSPORT_PATH);$(DDK_INC_PATH)
+
+TARGETLIBS=$(DDK_LIB_PATH)\hal.lib \
+           $(DDK_LIB_PATH)\ntoskrnl.lib \
+           $(DDK_LIB_PATH)\netio.lib \
+           $(DDK_LIB_PATH)\uuid.lib\
+           $(TARGETPATH)\polarssl.lib\
+           $(TARGETPATH)\stdlibrary.lib\
+           $(TARGETPATH)\packet.lib\
+           
+#C_DEFINES = $(C_DEFINES) $(PREPROCESSOR)
+C_DEFINES = $(PREPROCESSOR)           
+
+SOURCES=ecore.cpp\
+        driver.cpp\
+        klogger.cpp\
+        mwsk.cpp\
+        keybrd.cpp\
+        systhread.cpp\

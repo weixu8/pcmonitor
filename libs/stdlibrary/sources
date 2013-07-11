@@ -1,0 +1,13 @@
+TARGETNAME=stdlibrary
+TARGETPATH=.\build
+TARGETTYPE=LIBRARY
+
+INCLUDES=.\inc;.\h;$(DDK_INC_PATH)
+
+TARGETLIBS=$(DDK_LIB_PATH)\hal.lib \
+           $(DDK_LIB_PATH)\ntoskrnl.lib \
+
+C_DEFINES = $(PREPROCESSOR)           
+
+SOURCES=stdlibrary.cpp\
+

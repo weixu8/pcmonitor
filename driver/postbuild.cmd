@@ -1,0 +1,1 @@
+xcopy "build\amd64\*" "..\build\" /Y
