@@ -12,13 +12,11 @@ LINKLIBS=..\build\stdlibrary.lib \
 C_DEFINES = $(PREPROCESSOR)           
 
 SOURCES=camellia.cpp\
-        cipher.cpp\
+		blowfish.cpp\
+		cipher.cpp\
         cipher_wrap.cpp\
         base64.cpp\
-        asn1parse.cpp\
-        pem.cpp\
         des.cpp\
-        x509parse.cpp\
         aes.cpp\
         bignum.cpp\
         md.cpp\

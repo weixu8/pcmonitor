@@ -5,7 +5,7 @@
  *
  * \author Adriaan de Jong <dejong@fox-it.com>
  *
- *  Copyright (C) 2006-2011, Brainspark B.V.
+ *  Copyright (C) 2006-2012, Brainspark B.V.
  *
  *  This file is part of PolarSSL (http://www.polarssl.org)
  *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
@@ -27,18 +27,29 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "config.h"
+#include "polarssl/config.h"
 
 #if defined(POLARSSL_CIPHER_C)
 
-#include "cipher_wrap.h"
-#include "aes.h"
-#include "camellia.h"
-#include "des.h"
+#include "polarssl/cipher_wrap.h"
 
-#ifndef __KERNEL_MODE__
-#include <stdlib.h>
+#if defined(POLARSSL_AES_C)
+#include "polarssl/aes.h"
 #endif
+
+#if defined(POLARSSL_CAMELLIA_C)
+#include "polarssl/camellia.h"
+#endif
+
+#if defined(POLARSSL_DES_C)
+#include "polarssl/des.h"
+#endif
+
+#if defined(POLARSSL_BLOWFISH_C)
+#include "polarssl/blowfish.h"
+#endif
+
+#include <stdlib.h>
 
 #if defined(POLARSSL_AES_C)
 
@@ -150,7 +161,7 @@ const cipher_info_t aes_256_cbc_info = {
 #if defined(POLARSSL_CIPHER_MODE_CFB)
 const cipher_info_t aes_128_cfb128_info = {
     POLARSSL_CIPHER_AES_128_CFB128,
-    POLARSSL_MODE_CFB128,
+    POLARSSL_MODE_CFB,
     128,
     "AES-128-CFB128",
     16,
@@ -160,7 +171,7 @@ const cipher_info_t aes_128_cfb128_info = {
 
 const cipher_info_t aes_192_cfb128_info = {
     POLARSSL_CIPHER_AES_192_CFB128,
-    POLARSSL_MODE_CFB128,
+    POLARSSL_MODE_CFB,
     192,
     "AES-192-CFB128",
     16,
@@ -170,7 +181,7 @@ const cipher_info_t aes_192_cfb128_info = {
 
 const cipher_info_t aes_256_cfb128_info = {
     POLARSSL_CIPHER_AES_256_CFB128,
-    POLARSSL_MODE_CFB128,
+    POLARSSL_MODE_CFB,
     256,
     "AES-256-CFB128",
     16,
@@ -323,7 +334,7 @@ const cipher_info_t camellia_256_cbc_info = {
 #if defined(POLARSSL_CIPHER_MODE_CFB)
 const cipher_info_t camellia_128_cfb128_info = {
     POLARSSL_CIPHER_CAMELLIA_128_CFB128,
-    POLARSSL_MODE_CFB128,
+    POLARSSL_MODE_CFB,
     128,
     "CAMELLIA-128-CFB128",
     16,
@@ -333,7 +344,7 @@ const cipher_info_t camellia_128_cfb128_info = {
 
 const cipher_info_t camellia_192_cfb128_info = {
     POLARSSL_CIPHER_CAMELLIA_192_CFB128,
-    POLARSSL_MODE_CFB128,
+    POLARSSL_MODE_CFB,
     192,
     "CAMELLIA-192-CFB128",
     16,
@@ -343,7 +354,7 @@ const cipher_info_t camellia_192_cfb128_info = {
 
 const cipher_info_t camellia_256_cfb128_info = {
     POLARSSL_CIPHER_CAMELLIA_256_CFB128,
-    POLARSSL_MODE_CFB128,
+    POLARSSL_MODE_CFB,
     256,
     "CAMELLIA-256-CFB128",
     16,
@@ -524,8 +535,8 @@ const cipher_info_t des_ede_cbc_info = {
     POLARSSL_MODE_CBC,
     POLARSSL_KEY_LENGTH_DES_EDE,
     "DES-EDE-CBC",
-    16,
-    16,
+    8,
+    8,
     &des_ede_info
 };
 
@@ -550,5 +561,151 @@ const cipher_info_t des_ede3_cbc_info = {
     &des_ede3_info
 };
 #endif
+
+#if defined(POLARSSL_BLOWFISH_C)
+
+int blowfish_crypt_cbc_wrap( void *ctx, operation_t operation, size_t length,
+        unsigned char *iv, const unsigned char *input, unsigned char *output )
+{
+    return blowfish_crypt_cbc( (blowfish_context *) ctx, operation, length, iv, input, output );
+}
+
+int blowfish_crypt_cfb64_wrap( void *ctx, operation_t operation, size_t length,
+        size_t *iv_off, unsigned char *iv, const unsigned char *input, unsigned char *output )
+{
+#if defined(POLARSSL_CIPHER_MODE_CFB)
+    return blowfish_crypt_cfb64( (blowfish_context *) ctx, operation, length, iv_off, iv, input, output );
+#else
+    ((void) ctx);
+    ((void) operation);
+    ((void) length);
+    ((void) iv_off);
+    ((void) iv);
+    ((void) input);
+    ((void) output);
+
+    return POLARSSL_ERR_CIPHER_FEATURE_UNAVAILABLE;
+#endif
+}
+
+int blowfish_crypt_ctr_wrap( void *ctx, size_t length,
+        size_t *nc_off, unsigned char *nonce_counter, unsigned char *stream_block,
+        const unsigned char *input, unsigned char *output )
+{
+#if defined(POLARSSL_CIPHER_MODE_CTR)
+    return blowfish_crypt_ctr( (blowfish_context *) ctx, length, nc_off, nonce_counter,
+                          stream_block, input, output );
+#else
+    ((void) ctx);
+    ((void) length);
+    ((void) nc_off);
+    ((void) nonce_counter);
+    ((void) stream_block);
+    ((void) input);
+    ((void) output);
+
+    return POLARSSL_ERR_CIPHER_FEATURE_UNAVAILABLE;
+#endif
+}
+
+int blowfish_setkey_dec_wrap( void *ctx, const unsigned char *key, unsigned int key_length )
+{
+    return blowfish_setkey( (blowfish_context *) ctx, key, key_length );
+}
+
+int blowfish_setkey_enc_wrap( void *ctx, const unsigned char *key, unsigned int key_length )
+{
+    return blowfish_setkey( (blowfish_context *) ctx, key, key_length );
+}
+
+static void * blowfish_ctx_alloc( void )
+{
+    return malloc( sizeof( blowfish_context ) );
+}
+
+static void blowfish_ctx_free( void *ctx )
+{
+    free( ctx );
+}
+
+const cipher_base_t blowfish_info = {
+    POLARSSL_CIPHER_ID_BLOWFISH,
+    blowfish_crypt_cbc_wrap,
+    blowfish_crypt_cfb64_wrap,
+    blowfish_crypt_ctr_wrap,
+    blowfish_setkey_enc_wrap,
+    blowfish_setkey_dec_wrap,
+    blowfish_ctx_alloc,
+    blowfish_ctx_free
+};
+
+const cipher_info_t blowfish_cbc_info = {
+    POLARSSL_CIPHER_BLOWFISH_CBC,
+    POLARSSL_MODE_CBC,
+    128,
+    "BLOWFISH-CBC",
+    8,
+    8,
+    &blowfish_info
+};
+
+#if defined(POLARSSL_CIPHER_MODE_CFB)
+const cipher_info_t blowfish_cfb64_info = {
+    POLARSSL_CIPHER_BLOWFISH_CFB64,
+    POLARSSL_MODE_CFB,
+    128,
+    "BLOWFISH-CFB64",
+    8,
+    8,
+    &blowfish_info
+};
+#endif /* POLARSSL_CIPHER_MODE_CFB */
+
+#if defined(POLARSSL_CIPHER_MODE_CTR)
+const cipher_info_t blowfish_ctr_info = {
+    POLARSSL_CIPHER_BLOWFISH_CTR,
+    POLARSSL_MODE_CTR,
+    128,
+    "BLOWFISH-CTR",
+    8,
+    8,
+    &blowfish_info
+};
+#endif /* POLARSSL_CIPHER_MODE_CTR */
+#endif /* POLARSSL_BLOWFISH_C */
+
+#if defined(POLARSSL_CIPHER_NULL_CIPHER)
+static void * null_ctx_alloc( void )
+{
+    return (void *) 1;
+}
+
+
+static void null_ctx_free( void *ctx )
+{
+    ((void) ctx);
+}
+
+const cipher_base_t null_base_info = {
+    POLARSSL_CIPHER_ID_NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    null_ctx_alloc,
+    null_ctx_free
+};
+
+const cipher_info_t null_cipher_info = {
+    POLARSSL_CIPHER_NULL,
+    POLARSSL_MODE_NULL,
+    0,
+    "NULL",
+    1,
+    1,
+    &null_base_info
+};
+#endif /* defined(POLARSSL_CIPHER_NULL_CIPHER) */
 
 #endif

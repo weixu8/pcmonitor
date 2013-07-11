@@ -1,9 +1,9 @@
 /**
- * \file camellia.h
+ * \file aes.h
  *
- * \brief Camellia block cipher
+ * \brief AES block cipher
  *
- *  Copyright (C) 2006-2010, Brainspark B.V.
+ *  Copyright (C) 2006-2013, Brainspark B.V.
  *
  *  This file is part of PolarSSL (http://www.polarssl.org)
  *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
@@ -24,8 +24,10 @@
  *  with this program; if not, write to the Free Software Foundation, Inc.,
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-#ifndef POLARSSL_CAMELLIA_H
-#define POLARSSL_CAMELLIA_H
+#ifndef POLARSSL_AES_H
+#define POLARSSL_AES_H
+
+#include "config.h"
 
 #include <string.h>
 
@@ -36,78 +38,83 @@ typedef UINT32 uint32_t;
 #include <inttypes.h>
 #endif
 
-#define CAMELLIA_ENCRYPT     1
-#define CAMELLIA_DECRYPT     0
+#define AES_ENCRYPT     1
+#define AES_DECRYPT     0
 
-#define POLARSSL_ERR_CAMELLIA_INVALID_KEY_LENGTH           -0x0024  /**< Invalid key length. */
-#define POLARSSL_ERR_CAMELLIA_INVALID_INPUT_LENGTH         -0x0026  /**< Invalid data input length. */
+#define POLARSSL_ERR_AES_INVALID_KEY_LENGTH                -0x0020  /**< Invalid key length. */
+#define POLARSSL_ERR_AES_INVALID_INPUT_LENGTH              -0x0022  /**< Invalid data input length. */
+
+#if !defined(POLARSSL_AES_ALT)
+// Regular implementation
+//
 
 /**
- * \brief          CAMELLIA context structure
+ * \brief          AES context structure
  */
 typedef struct
 {
     int nr;                     /*!<  number of rounds  */
-    uint32_t rk[68];            /*!<  CAMELLIA round keys    */
+    uint32_t *rk;               /*!<  AES round keys    */
+    uint32_t buf[68];           /*!<  unaligned data    */
 }
-camellia_context;
+aes_context;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * \brief          CAMELLIA key schedule (encryption)
+ * \brief          AES key schedule (encryption)
  *
- * \param ctx      CAMELLIA context to be initialized
+ * \param ctx      AES context to be initialized
  * \param key      encryption key
  * \param keysize  must be 128, 192 or 256
- * 
- * \return         0 if successful, or POLARSSL_ERR_CAMELLIA_INVALID_KEY_LENGTH
+ *
+ * \return         0 if successful, or POLARSSL_ERR_AES_INVALID_KEY_LENGTH
  */
-int camellia_setkey_enc( camellia_context *ctx, const unsigned char *key, unsigned int keysize );
+int aes_setkey_enc( aes_context *ctx, const unsigned char *key, unsigned int keysize );
 
 /**
- * \brief          CAMELLIA key schedule (decryption)
+ * \brief          AES key schedule (decryption)
  *
- * \param ctx      CAMELLIA context to be initialized
+ * \param ctx      AES context to be initialized
  * \param key      decryption key
  * \param keysize  must be 128, 192 or 256
- * 
- * \return         0 if successful, or POLARSSL_ERR_CAMELLIA_INVALID_KEY_LENGTH
+ *
+ * \return         0 if successful, or POLARSSL_ERR_AES_INVALID_KEY_LENGTH
  */
-int camellia_setkey_dec( camellia_context *ctx, const unsigned char *key, unsigned int keysize );
+int aes_setkey_dec( aes_context *ctx, const unsigned char *key, unsigned int keysize );
 
 /**
- * \brief          CAMELLIA-ECB block encryption/decryption
+ * \brief          AES-ECB block encryption/decryption
  *
- * \param ctx      CAMELLIA context
- * \param mode     CAMELLIA_ENCRYPT or CAMELLIA_DECRYPT
+ * \param ctx      AES context
+ * \param mode     AES_ENCRYPT or AES_DECRYPT
  * \param input    16-byte input block
  * \param output   16-byte output block
- * 
+ *
  * \return         0 if successful
  */
-int camellia_crypt_ecb( camellia_context *ctx,
+int aes_crypt_ecb( aes_context *ctx,
                     int mode,
                     const unsigned char input[16],
                     unsigned char output[16] );
 
 /**
- * \brief          CAMELLIA-CBC buffer encryption/decryption
+ * \brief          AES-CBC buffer encryption/decryption
  *                 Length should be a multiple of the block
  *                 size (16 bytes)
  *
- * \param ctx      CAMELLIA context
- * \param mode     CAMELLIA_ENCRYPT or CAMELLIA_DECRYPT
+ * \param ctx      AES context
+ * \param mode     AES_ENCRYPT or AES_DECRYPT
  * \param length   length of the input data
  * \param iv       initialization vector (updated after use)
  * \param input    buffer holding the input data
  * \param output   buffer holding the output data
- * 
- * \return         0 if successful, or POLARSSL_ERR_CAMELLIA_INVALID_INPUT_LENGTH
+ *
+ * \return         0 if successful, or POLARSSL_ERR_AES_INVALID_INPUT_LENGTH
  */
-int camellia_crypt_cbc( camellia_context *ctx,
+int aes_crypt_cbc( aes_context *ctx,
                     int mode,
                     size_t length,
                     unsigned char iv[16],
@@ -115,23 +122,24 @@ int camellia_crypt_cbc( camellia_context *ctx,
                     unsigned char *output );
 
 /**
- * \brief          CAMELLIA-CFB128 buffer encryption/decryption
+ * \brief          AES-CFB128 buffer encryption/decryption.
  *
  * Note: Due to the nature of CFB you should use the same key schedule for
  * both encryption and decryption. So a context initialized with
- * camellia_setkey_enc() for both CAMELLIA_ENCRYPT and CAMELLIE_DECRYPT.
+ * aes_setkey_enc() for both AES_ENCRYPT and AES_DECRYPT.
  *
- * \param ctx      CAMELLIA context
- * \param mode     CAMELLIA_ENCRYPT or CAMELLIA_DECRYPT
+ * both 
+ * \param ctx      AES context
+ * \param mode     AES_ENCRYPT or AES_DECRYPT
  * \param length   length of the input data
  * \param iv_off   offset in IV (updated after use)
  * \param iv       initialization vector (updated after use)
  * \param input    buffer holding the input data
  * \param output   buffer holding the output data
- * 
- * \return         0 if successful, or POLARSSL_ERR_CAMELLIA_INVALID_INPUT_LENGTH
+ *
+ * \return         0 if successful
  */
-int camellia_crypt_cfb128( camellia_context *ctx,
+int aes_crypt_cfb128( aes_context *ctx,
                        int mode,
                        size_t length,
                        size_t *iv_off,
@@ -139,14 +147,14 @@ int camellia_crypt_cfb128( camellia_context *ctx,
                        const unsigned char *input,
                        unsigned char *output );
 
-/*
- * \brief               CAMELLIA-CTR buffer encryption/decryption
+/**
+ * \brief               AES-CTR buffer encryption/decryption
  *
  * Warning: You have to keep the maximum use of your counter in mind!
  *
  * Note: Due to the nature of CTR you should use the same key schedule for
  * both encryption and decryption. So a context initialized with
- * camellia_setkey_enc() for both CAMELLIA_ENCRYPT and CAMELLIA_DECRYPT.
+ * aes_setkey_enc() for both AES_ENCRYPT and AES_DECRYPT.
  *
  * \param length        The length of the data
  * \param nc_off        The offset in the current stream_block (for resuming
@@ -160,7 +168,7 @@ int camellia_crypt_cfb128( camellia_context *ctx,
  *
  * \return         0 if successful
  */
-int camellia_crypt_ctr( camellia_context *ctx,
+int aes_crypt_ctr( aes_context *ctx,
                        size_t length,
                        size_t *nc_off,
                        unsigned char nonce_counter[16],
@@ -168,15 +176,27 @@ int camellia_crypt_ctr( camellia_context *ctx,
                        const unsigned char *input,
                        unsigned char *output );
 
+#ifdef __cplusplus
+}
+#endif
+
+#else  /* POLARSSL_AES_ALT */
+#include "aes_alt.h"
+#endif /* POLARSSL_AES_ALT */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * \brief          Checkup routine
  *
  * \return         0 if successful, or 1 if the test failed
  */
-int camellia_self_test( int verbose );
+int aes_self_test( int verbose );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* camellia.h */
+#endif /* aes.h */

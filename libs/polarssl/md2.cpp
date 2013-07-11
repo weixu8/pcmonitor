@@ -1,7 +1,7 @@
 /*
  *  RFC 1115/1319 compliant MD2 implementation
  *
- *  Copyright (C) 2006-2010, Brainspark B.V.
+ *  Copyright (C) 2006-2013, Brainspark B.V.
  *
  *  This file is part of PolarSSL (http://www.polarssl.org)
  *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
@@ -29,17 +29,17 @@
  *  http://www.ietf.org/rfc/rfc1319.txt
  */
 
-#include "config.h"
+#include "polarssl/config.h"
 
 #if defined(POLARSSL_MD2_C)
 
-#include "md2.h"
+#include "polarssl/md2.h"
 
 #if defined(POLARSSL_FS_IO) || defined(POLARSSL_SELF_TEST)
-#ifndef __KERNEL_MODE__
 #include <stdio.h>
 #endif
-#endif
+
+#if !defined(POLARSSL_MD2_ALT)
 
 static const unsigned char PI_SUBST[256] =
 {
@@ -164,6 +164,8 @@ void md2_finish( md2_context *ctx, unsigned char output[16] )
 
     memcpy( output, ctx->state, 16 );
 }
+
+#endif /* !POLARSSL_MD2_ALT */
 
 /*
  * output = MD2( input buffer )

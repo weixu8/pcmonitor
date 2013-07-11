@@ -23,11 +23,18 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "config.h"
+#include "polarssl/config.h"
 
 #if defined(POLARSSL_BASE64_C)
 
-#include "base64.h"
+#include "polarssl/base64.h"
+
+#ifdef _MSC_VER
+#include <basetsd.h>
+typedef UINT32 uint32_t;
+#else
+#include <inttypes.h>
+#endif
 
 static const unsigned char base64_enc_map[64] =
 {
@@ -126,8 +133,8 @@ int base64_encode( unsigned char *dst, size_t *dlen,
 int base64_decode( unsigned char *dst, size_t *dlen,
                    const unsigned char *src, size_t slen )
 {
-    size_t i, j, n;
-    unsigned long x;
+    size_t i, n;
+    uint32_t j, x;
     unsigned char *p;
 
     for( i = j = n = 0; i < slen; i++ )
@@ -211,16 +218,17 @@ static const unsigned char base64_test_enc[] =
 int base64_self_test( int verbose )
 {
     size_t len;
-    unsigned char *src, buffer[128];
+    const unsigned char *src;
+    unsigned char buffer[128];
 
     if( verbose != 0 )
         printf( "  Base64 encoding test: " );
 
     len = sizeof( buffer );
-    src = (unsigned char *) base64_test_dec;
+    src = base64_test_dec;
 
     if( base64_encode( buffer, &len, src, 64 ) != 0 ||
-         memcmp( base64_test_enc, buffer, 88 ) != 0 ) 
+         memcmp( base64_test_enc, buffer, 88 ) != 0 )
     {
         if( verbose != 0 )
             printf( "failed\n" );
@@ -232,7 +240,7 @@ int base64_self_test( int verbose )
         printf( "passed\n  Base64 decoding test: " );
 
     len = sizeof( buffer );
-    src = (unsigned char *) base64_test_enc;
+    src = base64_test_enc;
 
     if( base64_decode( buffer, &len, src, 88 ) != 0 ||
          memcmp( base64_test_dec, buffer, 64 ) != 0 )

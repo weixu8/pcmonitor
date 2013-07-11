@@ -3,7 +3,7 @@
  *
  * \brief  Multi-precision integer library
  *
- *  Copyright (C) 2006-2010, Brainspark B.V.
+ *  Copyright (C) 2006-2013, Brainspark B.V.
  *
  *  This file is part of PolarSSL (http://www.polarssl.org)
  *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
@@ -32,6 +32,23 @@
 
 #include "config.h"
 
+#ifdef _MSC_VER
+#include <basetsd.h>
+#if (_MSC_VER <= 1200)
+typedef   signed short  int16_t;
+typedef unsigned short uint16_t;
+#else
+typedef  INT16  int16_t;
+typedef UINT16 uint16_t;
+#endif
+typedef  INT32  int32_t;
+typedef  INT64  int64_t;
+typedef UINT32 uint32_t;
+typedef UINT64 uint64_t;
+#else
+#include <inttypes.h>
+#endif
+
 #define POLARSSL_ERR_MPI_FILE_IO_ERROR                     -0x0002  /**< An error occurred while reading from or writing to a file. */
 #define POLARSSL_ERR_MPI_BAD_INPUT_DATA                    -0x0004  /**< Bad input parameters to function. */
 #define POLARSSL_ERR_MPI_INVALID_CHARACTER                 -0x0006  /**< There is an invalid character in the digit string. */
@@ -48,6 +65,7 @@
  */
 #define POLARSSL_MPI_MAX_LIMBS                             10000
 
+#if !defined(POLARSSL_CONFIG_OPTIONS)
 /*
  * Maximum window size used for modular exponentiation. Default: 6
  * Minimum value: 1. Maximum value: 6.
@@ -61,23 +79,38 @@
 
 /*
  * Maximum size of MPIs allowed in bits and bytes for user-MPIs.
- * ( Default: 512 bytes => 4096 bits )
+ * ( Default: 512 bytes => 4096 bits, Maximum tested: 2048 bytes => 16384 bits )
  *
  * Note: Calculations can results temporarily in larger MPIs. So the number
  * of limbs required (POLARSSL_MPI_MAX_LIMBS) is higher.
  */
 #define POLARSSL_MPI_MAX_SIZE                              512      /**< Maximum number of bytes for usable MPIs. */
+
+#endif /* !POLARSSL_CONFIG_OPTIONS */
+
 #define POLARSSL_MPI_MAX_BITS                              ( 8 * POLARSSL_MPI_MAX_SIZE )    /**< Maximum number of bits for usable MPIs. */
 
 /*
- * When reading from files with mpi_read_file() the buffer should have space
+ * When reading from files with mpi_read_file() and writing to files with
+ * mpi_write_file() the buffer should have space
  * for a (short) label, the MPI (in the provided radix), the newline
  * characters and the '\0'.
  *
  * By default we assume at least a 10 char label, a minimum radix of 10
  * (decimal) and a maximum of 4096 bit numbers (1234 decimal chars).
+ * Autosized at compile time for at least a 10 char label, a minimum radix
+ * of 10 (decimal) for a number of POLARSSL_MPI_MAX_BITS size.
+ *
+ * This used to be statically sized to 1250 for a maximum of 4096 bit
+ * numbers (1234 decimal chars).
+ *
+ * Calculate using the formula:
+ *  POLARSSL_MPI_RW_BUFFER_SIZE = ceil(POLARSSL_MPI_MAX_BITS / ln(10) * ln(2)) +
+ *                                LabelSize + 6
  */
-#define POLARSSL_MPI_READ_BUFFER_SIZE                       1250   
+#define POLARSSL_MPI_MAX_BITS_SCALE100          ( 100 * POLARSSL_MPI_MAX_BITS )
+#define LN_2_DIV_LN_10_SCALE100                 332
+#define POLARSSL_MPI_RW_BUFFER_SIZE             ( ((POLARSSL_MPI_MAX_BITS_SCALE100 + LN_2_DIV_LN_10_SCALE100 - 1) / LN_2_DIV_LN_10_SCALE100) + 10 + 6 )
 
 /*
  * Define the base integer type, architecture-wise
@@ -85,34 +118,45 @@
 #if defined(POLARSSL_HAVE_INT8)
 typedef   signed char  t_sint;
 typedef unsigned char  t_uint;
-typedef unsigned short t_udbl;
+typedef uint16_t       t_udbl;
+#define POLARSSL_HAVE_UDBL
 #else
 #if defined(POLARSSL_HAVE_INT16)
-typedef   signed short t_sint;
-typedef unsigned short t_uint;
-typedef unsigned long  t_udbl;
+typedef  int16_t t_sint;
+typedef uint16_t t_uint;
+typedef uint32_t t_udbl;
+#define POLARSSL_HAVE_UDBL
 #else
-  typedef   signed long t_sint;
-  typedef unsigned long t_uint;
-  #if defined(_MSC_VER) && defined(_M_IX86)
-  typedef unsigned __int64 t_udbl;
+  #if ( defined(_MSC_VER) && defined(_M_AMD64) )
+    typedef  int64_t t_sint;
+    typedef uint64_t t_uint;
   #else
-    #if defined(__GNUC__) && (                          \
-        defined(__amd64__) || defined(__x86_64__)    || \
-        defined(__ppc64__) || defined(__powerpc64__) || \
-        defined(__ia64__)  || defined(__alpha__)     || \
-        (defined(__sparc__) && defined(__arch64__))  || \
-        defined(__s390x__) )
-    typedef unsigned int t_udbl __attribute__((mode(TI)));
-    #define POLARSSL_HAVE_LONGLONG
+    #if ( defined(__GNUC__) && (                          \
+          defined(__amd64__) || defined(__x86_64__)    || \
+          defined(__ppc64__) || defined(__powerpc64__) || \
+          defined(__ia64__)  || defined(__alpha__)     || \
+          (defined(__sparc__) && defined(__arch64__))  || \
+          defined(__s390x__) ) )
+       typedef  int64_t t_sint;
+       typedef uint64_t t_uint;
+       typedef unsigned int t_udbl __attribute__((mode(TI)));
+       #define POLARSSL_HAVE_UDBL
     #else
-      #if defined(POLARSSL_HAVE_LONGLONG)
-      typedef unsigned long long t_udbl;
-      #endif
+       typedef  int32_t t_sint;
+       typedef uint32_t t_uint;
+       #if ( defined(_MSC_VER) && defined(_M_IX86) )
+         typedef uint64_t t_udbl;
+         #define POLARSSL_HAVE_UDBL
+       #else
+         #if defined( POLARSSL_HAVE_LONGLONG )
+           typedef unsigned long long t_udbl;
+           #define POLARSSL_HAVE_UDBL
+         #endif
+       #endif
     #endif
   #endif
-#endif
-#endif
+#endif /* POLARSSL_HAVE_INT16 */
+#endif /* POLARSSL_HAVE_INT8  */
 
 /**
  * \brief          MPI structure
@@ -184,7 +228,7 @@ void mpi_swap( mpi *X, mpi *Y );
  */
 int mpi_lset( mpi *X, t_sint z );
 
-/*
+/**
  * \brief          Get a specific bit from X
  *
  * \param X        MPI to use
@@ -194,7 +238,7 @@ int mpi_lset( mpi *X, t_sint z );
  */
 int mpi_get_bit( const mpi *X, size_t pos );
 
-/*
+/**
  * \brief          Set a bit of X to a specific value of 0 or 1
  *
  * \note           Will grow X if necessary to set a bit to 1 in a not yet
@@ -265,6 +309,7 @@ int mpi_read_string( mpi *X, int radix, const char *s );
  */
 int mpi_write_string( const mpi *X, int radix, char *s, size_t *slen );
 
+#if defined(POLARSSL_FS_IO)
 /**
  * \brief          Read X from an opened file
  *
@@ -291,6 +336,7 @@ int mpi_read_file( mpi *X, int radix, FILE *fin );
  * \note           Set fout == NULL to print X on the console.
  */
 int mpi_write_file( const char *p, const mpi *X, int radix, FILE *fout );
+#endif /* POLARSSL_FS_IO */
 
 /**
  * \brief          Import X from unsigned binary data, big endian

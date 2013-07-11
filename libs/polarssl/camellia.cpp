@@ -1,7 +1,7 @@
 /*
  *  Camellia implementation
  *
- *  Copyright (C) 2006-2010, Brainspark B.V.
+ *  Copyright (C) 2006-2013, Brainspark B.V.
  *
  *  This file is part of PolarSSL (http://www.polarssl.org)
  *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
@@ -29,27 +29,29 @@
  *  http://info.isl.ntt.co.jp/crypt/eng/camellia/dl/01espec.pdf
  */
 
-#include "config.h"
+#include "polarssl/config.h"
 
 #if defined(POLARSSL_CAMELLIA_C)
 
-#include "camellia.h"
+#include "polarssl/camellia.h"
+
+#if !defined(POLARSSL_CAMELLIA_ALT)
 
 /*
  * 32-bit integer manipulation macros (big endian)
  */
-#ifndef GET_ULONG_BE
-#define GET_ULONG_BE(n,b,i)                             \
+#ifndef GET_UINT32_BE
+#define GET_UINT32_BE(n,b,i)                            \
 {                                                       \
-    (n) = ( (unsigned long) (b)[(i)    ] << 24 )        \
-        | ( (unsigned long) (b)[(i) + 1] << 16 )        \
-        | ( (unsigned long) (b)[(i) + 2] <<  8 )        \
-        | ( (unsigned long) (b)[(i) + 3]       );       \
+    (n) = ( (uint32_t) (b)[(i)    ] << 24 )             \
+        | ( (uint32_t) (b)[(i) + 1] << 16 )             \
+        | ( (uint32_t) (b)[(i) + 2] <<  8 )             \
+        | ( (uint32_t) (b)[(i) + 3]       );            \
 }
 #endif
 
-#ifndef PUT_ULONG_BE
-#define PUT_ULONG_BE(n,b,i)                             \
+#ifndef PUT_UINT32_BE
+#define PUT_UINT32_BE(n,b,i)                            \
 {                                                       \
     (b)[(i)    ] = (unsigned char) ( (n) >> 24 );       \
     (b)[(i) + 1] = (unsigned char) ( (n) >> 16 );       \
@@ -342,8 +344,8 @@ int camellia_setkey_enc( camellia_context *ctx, const unsigned char *key, unsign
      * Prepare SIGMA values
      */
     for (i = 0; i < 6; i++) {
-        GET_ULONG_BE(SIGMA[i][0], SIGMA_CHARS[i], 0);
-        GET_ULONG_BE(SIGMA[i][1], SIGMA_CHARS[i], 4);
+        GET_UINT32_BE(SIGMA[i][0], SIGMA_CHARS[i], 0);
+        GET_UINT32_BE(SIGMA[i][1], SIGMA_CHARS[i], 4);
     }
 
     /*
@@ -354,7 +356,7 @@ int camellia_setkey_enc( camellia_context *ctx, const unsigned char *key, unsign
 
     /* Store KL, KR */
     for (i = 0; i < 8; i++)
-        GET_ULONG_BE(KC[i], t, i * 4);
+        GET_UINT32_BE(KC[i], t, i * 4);
 
     /* Generate KA */
     for( i = 0; i < 4; ++i)
@@ -475,10 +477,10 @@ int camellia_crypt_ecb( camellia_context *ctx,
     NR = ctx->nr;
     RK = ctx->rk;
 
-    GET_ULONG_BE( X[0], input,  0 );
-    GET_ULONG_BE( X[1], input,  4 );
-    GET_ULONG_BE( X[2], input,  8 );
-    GET_ULONG_BE( X[3], input, 12 );
+    GET_UINT32_BE( X[0], input,  0 );
+    GET_UINT32_BE( X[1], input,  4 );
+    GET_UINT32_BE( X[2], input,  8 );
+    GET_UINT32_BE( X[3], input, 12 );
 
     X[0] ^= *RK++;
     X[1] ^= *RK++;
@@ -513,10 +515,10 @@ int camellia_crypt_ecb( camellia_context *ctx,
     X[0] ^= *RK++;
     X[1] ^= *RK++;
 
-    PUT_ULONG_BE( X[2], output,  0 );
-    PUT_ULONG_BE( X[3], output,  4 );
-    PUT_ULONG_BE( X[0], output,  8 );
-    PUT_ULONG_BE( X[1], output, 12 );
+    PUT_UINT32_BE( X[2], output,  0 );
+    PUT_UINT32_BE( X[3], output,  4 );
+    PUT_UINT32_BE( X[0], output,  8 );
+    PUT_UINT32_BE( X[1], output, 12 );
 
     return( 0 );
 }
@@ -633,7 +635,7 @@ int camellia_crypt_ctr( camellia_context *ctx,
                        const unsigned char *input,
                        unsigned char *output )
 {
-    int c, i, cb;
+    int c, i;
     size_t n = *nc_off;
 
     while( length-- )
@@ -641,12 +643,9 @@ int camellia_crypt_ctr( camellia_context *ctx,
         if( n == 0 ) {
             camellia_crypt_ecb( ctx, CAMELLIA_ENCRYPT, nonce_counter, stream_block );
 
-            i = 15;
-            do {
-               nonce_counter[i]++;
-               cb = nonce_counter[i] == 0;
-            } while( i-- && cb );
-
+            for( i = 16; i > 0; i-- )
+                if( ++nonce_counter[i - 1] != 0 )
+                    break;
         }
         c = *input++;
         *output++ = (unsigned char)( c ^ stream_block[n] );
@@ -659,6 +658,7 @@ int camellia_crypt_ctr( camellia_context *ctx,
     return( 0 );
 }
 #endif /* POLARSSL_CIPHER_MODE_CTR */
+#endif /* !POLARSSL_CAMELLIA_ALT */
 
 #if defined(POLARSSL_SELF_TEST)
 

@@ -30,16 +30,14 @@
  *  http://math.libtomcrypt.com/files/tommath.pdf
  */
 
-#include "config.h"
+#include "polarssl/config.h"
 
 #if defined(POLARSSL_BIGNUM_C)
 
-#include "bignum.h"
-#include "bn_mul.h"
+#include "polarssl/bignum.h"
+#include "polarssl/bn_mul.h"
 
-#ifndef __KERNEL_MODE__
 #include <stdlib.h>
-#endif
 
 #define ciL    (sizeof(t_uint))         /* chars in limb  */
 #define biL    (ciL << 3)               /* bits  in limb  */
@@ -408,7 +406,8 @@ int mpi_write_string( const mpi *X, int radix, char *s, size_t *slen )
                 if( c == 0 && k == 0 && ( i + j + 3 ) != 0 )
                     continue;
 
-                p += sprintf( p, "%02X", c );
+                *(p++) = "0123456789ABCDEF" [c / 16];
+                *(p++) = "0123456789ABCDEF" [c % 16];
                 k = 1;
             }
         }
@@ -446,7 +445,7 @@ int mpi_read_file( mpi *X, int radix, FILE *fin )
      * Buffer should have space for (short) label and decimal formatted MPI,
      * newline characters and '\0'
      */
-    char s[ POLARSSL_MPI_READ_BUFFER_SIZE ];
+    char s[ POLARSSL_MPI_RW_BUFFER_SIZE ];
 
     memset( s, 0, sizeof( s ) );
     if( fgets( s, sizeof( s ) - 1, fin ) == NULL )
@@ -475,9 +474,10 @@ int mpi_write_file( const char *p, const mpi *X, int radix, FILE *fout )
     int ret;
     size_t n, slen, plen;
     /*
-     * Buffer should have space for minus sign, hexified MPI and '\0'
+     * Buffer should have space for (short) label and decimal formatted MPI,
+     * newline characters and '\0'
      */
-    char s[ 2 * POLARSSL_MPI_MAX_SIZE + 2 ];
+    char s[ POLARSSL_MPI_RW_BUFFER_SIZE ];
 
     n = sizeof( s );
     memset( s, 0, n );
@@ -610,6 +610,9 @@ int mpi_shift_r( mpi *X, size_t count )
 
     v0 = count /  biL;
     v1 = count & (biL - 1);
+
+    if( v0 > X->n || ( v0 == X->n && v1 > 0 ) )
+        return mpi_lset( X, 0 );
 
     /*
      * shift by count / limb_size
@@ -763,7 +766,7 @@ int mpi_add_abs( mpi *X, const mpi *A, const mpi *B )
             p = X->p + i;
         }
 
-        *p += c; c = ( *p < c ); i++;
+        *p += c; c = ( *p < c ); i++; p++;
     }
 
 cleanup:
@@ -931,8 +934,16 @@ int mpi_sub_int( mpi *X, const mpi *A, t_sint b )
 
 /*
  * Helper for mpi multiplication
- */ 
-static void mpi_mul_hlp( size_t i, t_uint *s, t_uint *d, t_uint b )
+ */
+static
+#if defined(__APPLE__) && defined(__arm__)
+/*
+ * Apple LLVM version 4.2 (clang-425.0.24) (based on LLVM 3.2svn)
+ * appears to need this to prevent bad ARM code generation at -O3.
+ */
+__attribute__ ((noinline))
+#endif
+void mpi_mul_hlp( size_t i, t_uint *s, t_uint *d, t_uint b )
 {
     t_uint c = 0, t = 0;
 
@@ -1088,7 +1099,7 @@ int mpi_div_mpi( mpi *Q, mpi *R, const mpi *A, const mpi *B )
 
     n = X.n - 1;
     t = Y.n - 1;
-    mpi_shift_l( &Y, biL * (n - t) );
+    MPI_CHK( mpi_shift_l( &Y, biL * (n - t) ) );
 
     while( mpi_cmp_mpi( &X, &Y ) >= 0 )
     {
@@ -1103,7 +1114,7 @@ int mpi_div_mpi( mpi *Q, mpi *R, const mpi *A, const mpi *B )
             Z.p[i - t - 1] = ~0;
         else
         {
-#if defined(POLARSSL_HAVE_LONGLONG)
+#if defined(POLARSSL_HAVE_UDBL)
             t_udbl r;
 
             r  = (t_udbl) X.p[i] << biL;
@@ -1195,9 +1206,9 @@ int mpi_div_mpi( mpi *Q, mpi *R, const mpi *A, const mpi *B )
     if( R != NULL )
     {
         mpi_shift_r( &X, k );
+        X.s = A->s;
         mpi_copy( R, &X );
 
-        R->s = A->s;
         if( mpi_cmp_int( R, 0 ) == 0 )
             R->s = 1;
     }
@@ -1212,10 +1223,6 @@ cleanup:
 
 /*
  * Division by int: A = Q * b + R
- *
- * Returns 0 if successful
- *         1 if memory allocation failed
- *         POLARSSL_ERR_MPI_DIVISION_BY_ZERO if b == 0
  */
 int mpi_div_int( mpi *Q, mpi *R, const mpi *A, t_sint b )
 {
@@ -1373,7 +1380,7 @@ static void mpi_montred( mpi *A, const mpi *N, t_uint mm, const mpi *T )
     t_uint z = 1;
     mpi U;
 
-    U.n = U.s = z;
+    U.n = U.s = (int) z;
     U.p = &z;
 
     mpi_montmul( A, &U, N, mm, T );
@@ -1652,8 +1659,6 @@ cleanup:
     return( ret );
 }
 
-#if defined(POLARSSL_GENPRIME)
-
 /*
  * Modular inverse: X = A^-1 mod N  (HAC 14.61 / 14.64)
  */
@@ -1748,6 +1753,8 @@ cleanup:
 
     return( ret );
 }
+
+#if defined(POLARSSL_GENPRIME)
 
 static const int small_prime[] =
 {

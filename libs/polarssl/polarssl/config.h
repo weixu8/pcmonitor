@@ -3,7 +3,7 @@
  *
  * \brief Configuration options (set of defines)
  *
- *  Copyright (C) 2006-2011, Brainspark B.V.
+ *  Copyright (C) 2006-2013, Brainspark B.V.
  *
  *  This file is part of PolarSSL (http://www.polarssl.org)
  *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
@@ -30,16 +30,6 @@
  */
 #ifndef POLARSSL_CONFIG_H
 #define POLARSSL_CONFIG_H
-
-#include <transport_config.h>
-
-#ifdef __KERNEL_MODE__
-#include <stdlibrary.h>
-#endif
-
-#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_DEPRECATE)
-#define _CRT_SECURE_NO_DEPRECATE 1
-#endif
 
 /**
  * \name SECTION: System support
@@ -69,11 +59,10 @@
 /**
  * \def POLARSSL_HAVE_LONGLONG
  *
- * The compiler supports the use of long long.
- *
- * Uncomment if the compiler supports long long.
-#define POLARSSL_HAVE_LONGLONG
+ * The compiler supports the 'long long' type.
+ * (Only used on 32-bit platforms)
  */
+#define POLARSSL_HAVE_LONGLONG
 
 /**
  * \def POLARSSL_HAVE_ASM
@@ -95,7 +84,7 @@
 /**
  * \def POLARSSL_HAVE_SSE2
  *
- * CPI supports SSE2 instruction set.
+ * CPU supports SSE2 instruction set.
  *
  * Uncomment if the CPU supports SSE2 (IA-32 specific).
  *
@@ -109,6 +98,35 @@
  * This section sets support for features that are or are not needed
  * within the modules that are enabled.
  * \{
+ */
+
+/**
+ * \def POLARSSL_XXX_ALT
+ *
+ * Uncomment a macro to let PolarSSL use your alternate core implementation of
+ * a symmetric or hash algorithm (e.g. platform specific assembly optimized
+ * implementations). Keep in mind that the function prototypes should remain
+ * the same.
+ *
+ * Example: In case you uncomment POLARSSL_AES_ALT, PolarSSL will no longer
+ * provide the "struct aes_context" definition and omit the base function
+ * declarations and implementations. "aes_alt.h" will be included from
+ * "aes.h" to include the new function definitions.
+ *
+ * Uncomment a macro to enable alternate implementation for core algorithm
+ * functions
+#define POLARSSL_AES_ALT
+#define POLARSSL_ARC4_ALT
+#define POLARSSL_BLOWFISH_ALT
+#define POLARSSL_CAMELLIA_ALT
+#define POLARSSL_DES_ALT
+#define POLARSSL_XTEA_ALT
+#define POLARSSL_MD2_ALT
+#define POLARSSL_MD4_ALT
+#define POLARSSL_MD5_ALT
+#define POLARSSL_SHA1_ALT
+#define POLARSSL_SHA2_ALT
+#define POLARSSL_SHA4_ALT
  */
 
 /**
@@ -136,13 +154,47 @@
 #define POLARSSL_CIPHER_MODE_CTR
 
 /**
- * \def POLARSSL_DEBUG_MSG
+ * \def POLARSSL_CIPHER_NULL_CIPHER
  *
- * Requires: POLARSSL_DEBUG_C
+ * Enable NULL cipher.
+ * Warning: Only do so when you know what you are doing. This allows for
+ * encryption or channels without any security!
  *
- * Enable all SSL/TLS debugging messages.
+ * Requires POLARSSL_ENABLE_WEAK_CIPHERSUITES as well to enable
+ * the following ciphersuites:
+ *      TLS_RSA_WITH_NULL_MD5
+ *      TLS_RSA_WITH_NULL_SHA
+ *      TLS_RSA_WITH_NULL_SHA256
+ *
+ * Uncomment this macro to enable the NULL cipher and ciphersuites
+#define POLARSSL_CIPHER_NULL_CIPHER
  */
-#define POLARSSL_DEBUG_MSG
+
+/**
+ * \def POLARSSL_ENABLE_WEAK_CIPHERSUITES
+ *
+ * Enable weak ciphersuites in SSL / TLS
+ * Warning: Only do so when you know what you are doing. This allows for
+ * channels with virtually no security at all!
+ *
+ * This enables the following ciphersuites:
+ *      TLS_RSA_WITH_DES_CBC_SHA
+ *      TLS_DHE_RSA_WITH_DES_CBC_SHA
+ *
+ * Uncomment this macro to enable weak ciphersuites
+#define POLARSSL_ENABLE_WEAK_CIPHERSUITES
+ */
+
+/**
+ * \def POLARSSL_ERROR_STRERROR_DUMMY
+ *
+ * Enable a dummy error function to make use of error_strerror() in
+ * third party libraries easier.
+ *
+ * Disable if you run into name conflicts and want to really remove the
+ * error_strerror()
+ */
+#define POLARSSL_ERROR_STRERROR_DUMMY
 
 /**
  * \def POLARSSL_GENPRIME
@@ -158,7 +210,7 @@
  *
  * Enable functions that use the filesystem.
  */
-//#define POLARSSL_FS_IO
+#define POLARSSL_FS_IO
 
 /**
  * \def POLARSSL_NO_DEFAULT_ENTROPY_SOURCES
@@ -212,6 +264,56 @@
 //#define POLARSSL_SELF_TEST
 
 /**
+ * \def POLARSSL_SSL_ALL_ALERT_MESSAGES
+ *
+ * Enable sending of alert messages in case of encountered errors as per RFC.
+ * If you choose not to send the alert messages, PolarSSL can still communicate
+ * with other servers, only debugging of failures is harder.
+ *
+ * The advantage of not sending alert messages, is that no information is given
+ * about reasons for failures thus preventing adversaries of gaining intel.
+ *
+ * Enable sending of all alert messages
+ */
+#define POLARSSL_SSL_ALERT_MESSAGES
+
+/**
+ * \def POLARSSL_SSL_DEBUG_ALL
+ *
+ * Enable the debug messages in SSL module for all issues.
+ * Debug messages have been disabled in some places to prevent timing
+ * attacks due to (unbalanced) debugging function calls.
+ *
+ * If you need all error reporting you should enable this during debugging,
+ * but remove this for production servers that should log as well.
+ *
+ * Uncomment this macro to report all debug messages on errors introducing
+ * a timing side-channel.
+ *
+#define POLARSSL_SSL_DEBUG_ALL
+ */
+
+/**
+ * \def POLARSSL_SSL_HW_RECORD_ACCEL
+ *
+ * Enable hooking functions in SSL module for hardware acceleration of
+ * individual records.
+ *
+ * Uncomment this macro to enable hooking functions.
+#define POLARSSL_SSL_HW_RECORD_ACCEL
+ */
+
+/**
+ * \def POLARSSL_SSL_SRV_SUPPORT_SSLV2_CLIENT_HELLO
+ *
+ * Enable support for receiving and parsing SSLv2 Client Hello messages for the
+ * SSL Server module (POLARSSL_SSL_SRV_C)
+ *
+ * Comment this macro to disable support for SSLv2 Client Hello messages.
+ */
+#define POLARSSL_SSL_SRV_SUPPORT_SSLV2_CLIENT_HELLO
+
+/**
  * \def POLARSSL_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION
  *
  * If set, the X509 parser will not break-off when parsing an X509 certificate
@@ -220,6 +322,22 @@
  * Uncomment to prevent an error.
  *
 #define POLARSSL_X509_ALLOW_UNSUPPORTED_CRITICAL_EXTENSION
+ */
+
+/**
+ * \def POLARSSL_ZLIB_SUPPORT
+ *
+ * If set, the SSL/TLS module uses ZLIB to support compression and
+ * decompression of packet data.
+ *
+ * Used in: library/ssl_tls.c
+ *          library/ssl_cli.c
+ *          library/ssl_srv.c
+ *
+ * This feature requires zlib library and headers to be present.
+ *
+ * Uncomment to enable use of ZLIB
+#define POLARSSL_ZLIB_SUPPORT
  */
 /* \} name */
 
@@ -240,10 +358,20 @@
  *          library/pem.c
  *          library/ctr_drbg.c
  *
- * This module enables the following ciphersuites:
- *      SSL_RSA_AES_128_SHA
- *      SSL_RSA_AES_256_SHA
- *      SSL_EDH_RSA_AES_256_SHA
+ * This module enables the following ciphersuites (if other requisites are
+ * enabled as well):
+ *      TLS_RSA_WITH_AES_128_CBC_SHA
+ *      TLS_RSA_WITH_AES_256_CBC_SHA
+ *      TLS_DHE_RSA_WITH_AES_128_CBC_SHA
+ *      TLS_DHE_RSA_WITH_AES_256_CBC_SHA
+ *      TLS_RSA_WITH_AES_128_CBC_SHA256
+ *      TLS_RSA_WITH_AES_256_CBC_SHA256
+ *      TLS_DHE_RSA_WITH_AES_128_CBC_SHA256
+ *      TLS_DHE_RSA_WITH_AES_256_CBC_SHA256
+ *      TLS_RSA_WITH_AES_128_GCM_SHA256
+ *      TLS_RSA_WITH_AES_256_GCM_SHA384
+ *
+ * PEM uses AES for decrypting encrypted keys.
  */
 #define POLARSSL_AES_C
 
@@ -256,8 +384,8 @@
  * Caller:  library/ssl_tls.c
  *
  * This module enables the following ciphersuites:
- *      SSL_RSA_RC4_128_MD5
- *      SSL_RSA_RC4_128_SHA
+ *      TLS_RSA_WITH_RC4_128_MD5
+ *      TLS_RSA_WITH_RC4_128_SHA
  */
 #define POLARSSL_ARC4_C
 
@@ -270,6 +398,15 @@
  * Caller:  library/x509parse.c
  */
 #define POLARSSL_ASN1_PARSE_C
+
+/**
+ * \def POLARSSL_ASN1_WRITE_C
+ *
+ * Enable the generic ASN1 writer.
+ *
+ * Module:  library/asn1write.c
+ */
+#define POLARSSL_ASN1_WRITE_C
 
 /**
  * \def POLARSSL_BASE64_C
@@ -286,7 +423,7 @@
 /**
  * \def POLARSSL_BIGNUM_C
  *
- * Enable the multo-precision integer library.
+ * Enable the multi-precision integer library.
  *
  * Module:  library/bignum.c
  * Caller:  library/dhm.c
@@ -299,6 +436,15 @@
 #define POLARSSL_BIGNUM_C
 
 /**
+ * \def POLARSSL_BLOWFISH_C
+ *
+ * Enable the Blowfish block cipher.
+ *
+ * Module:  library/blowfish.c
+ */
+#define POLARSSL_BLOWFISH_C
+
+/**
  * \def POLARSSL_CAMELLIA_C
  *
  * Enable the Camellia block cipher.
@@ -306,10 +452,16 @@
  * Module:  library/camellia.c
  * Caller:  library/ssl_tls.c
  *
- * This module enabled the following cipher suites:
- *      SSL_RSA_CAMELLIA_128_SHA
- *      SSL_RSA_CAMELLIA_256_SHA
- *      SSL_EDH_RSA_CAMELLIA_256_SHA
+ * This module enables the following ciphersuites (if other requisites are
+ * enabled as well):
+ *      TLS_RSA_WITH_CAMELLIA_128_CBC_SHA
+ *      TLS_RSA_WITH_CAMELLIA_256_CBC_SHA
+ *      TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA
+ *      TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA
+ *      TLS_RSA_WITH_CAMELLIA_128_CBC_SHA256
+ *      TLS_RSA_WITH_CAMELLIA_256_CBC_SHA256
+ *      TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA256
+ *      TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA256
  */
 #define POLARSSL_CAMELLIA_C
 
@@ -371,11 +523,15 @@
  * Enable the DES block cipher.
  *
  * Module:  library/des.c
- * Caller:  library/ssl_tls.c
+ * Caller:  library/pem.c
+ *          library/ssl_tls.c
  *
- * This module enables the following ciphersuites:
- *      SSL_RSA_DES_168_SHA
- *      SSL_EDH_RSA_DES_168_SHA
+ * This module enables the following ciphersuites (if other requisites are
+ * enabled as well):
+ *      TLS_RSA_WITH_3DES_EDE_CBC_SHA
+ *      TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA
+ *
+ * PEM uses DES/3DES for decrypting encrypted keys.
  */
 #define POLARSSL_DES_C
 
@@ -388,12 +544,22 @@
  * Caller:  library/ssl_cli.c
  *          library/ssl_srv.c
  *
- * This module enables the following ciphersuites:
- *      SSL_EDH_RSA_DES_168_SHA
- *      SSL_EDH_RSA_AES_256_SHA
- *      SSL_EDH_RSA_CAMELLIA_256_SHA
+ * This module enables the following ciphersuites (if other requisites are
+ * enabled as well):
+ *      TLS_DHE_RSA_WITH_DES_CBC_SHA
+ *      TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA
+ *      TLS_DHE_RSA_WITH_AES_128_CBC_SHA
+ *      TLS_DHE_RSA_WITH_AES_256_CBC_SHA
+ *      TLS_DHE_RSA_WITH_AES_128_CBC_SHA256
+ *      TLS_DHE_RSA_WITH_AES_256_CBC_SHA256
+ *      TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA
+ *      TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA
+ *      TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA256
+ *      TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA256
+ *      TLS_DHE_RSA_WITH_AES_128_GCM_SHA256
+ *      TLS_DHE_RSA_WITH_AES_256_GCM_SHA384
  */
-//#define POLARSSL_DHM_C
+#define POLARSSL_DHM_C
 
 /**
  * \def POLARSSL_ENTROPY_C
@@ -422,18 +588,43 @@
 #define POLARSSL_ERROR_C
 
 /**
+ * \def POLARSSL_GCM_C
+ *
+ * Enable the Galois/Counter Mode (GCM) for AES
+ *
+ * Module:  library/gcm.c
+ *
+ * Requires: POLARSSL_AES_C
+ *
+ * This module enables the following ciphersuites (if other requisites are
+ * enabled as well):
+ *      TLS_RSA_WITH_AES_128_GCM_SHA256
+ *      TLS_RSA_WITH_AES_256_GCM_SHA384
+ */
+#define POLARSSL_GCM_C
+
+/**
  * \def POLARSSL_HAVEGE_C
  *
  * Enable the HAVEGE random generator.
+ *
+ * Warning: the HAVEGE random generator is not suitable for virtualized
+ *          environments
+ *
+ * Warning: the HAVEGE random generator is dependent on timing and specific
+ *          processor traits. It is therefore not advised to use HAVEGE as
+ *          your applications primary random generator or primary entropy pool
+ *          input. As a secondary input to your entropy pool, it IS able add
+ *          the (limited) extra entropy it provides.
  *
  * Module:  library/havege.c
  * Caller:
  *
  * Requires: POLARSSL_TIMING_C
  *
- * This module enables the HAVEGE random number generator.
- */
+ * Uncomment to enable the HAVEGE random generator.
 #define POLARSSL_HAVEGE_C
+ */
 
 /**
  * \def POLARSSL_MD_C
@@ -479,10 +670,12 @@
  * Enable the MD5 hash algorithm
  *
  * Module:  library/md5.c
- * Caller:  library/ssl_tls.c
+ * Caller:  library/pem.c
+ *          library/ssl_tls.c
  *          library/x509parse.c
  *
  * This module is required for SSL/TLS and X.509.
+ * PEM uses MD5 for decrypting encrypted keys.
  */
 #define POLARSSL_MD5_C
 
@@ -511,6 +704,20 @@
 #define POLARSSL_PADLOCK_C
 
 /**
+ * \def POLARSSL_PBKDF2_C
+ *
+ * Enable PKCS#5 PBKDF2 key derivation function
+ * DEPRECATED: Use POLARSSL_PKCS5_C instead
+ *
+ * Module:  library/pbkdf2.c
+ *
+ * Requires: POLARSSL_PKCS5_C
+ *
+ * This module adds support for the PKCS#5 PBKDF2 key derivation function.
+#define POLARSSL_PBKDF2_C
+ */
+
+/**
  * \def POLARSSL_PEM_C
  *
  * Enable PEM decoding
@@ -525,9 +732,22 @@
 #define POLARSSL_PEM_C
 
 /**
+ * \def POLARSSL_PKCS5_C
+ *
+ * Enable PKCS#5 functions
+ *
+ * Module:  library/pkcs5.c
+ *
+ * Requires: POLARSSL_MD_C
+ *
+ * This module adds support for the PKCS#5 functions.
+ */
+#define POLARSSL_PKCS5_C
+
+/**
  * \def POLARSSL_PKCS11_C
  *
- * Enable support for PKCS#11 smartcard support.
+ * Enable wrapper for PKCS#11 smartcard support.
  *
  * Module:  library/ssl_srv.c
  * Caller:  library/ssl_cli.c
@@ -535,10 +755,26 @@
  *
  * Requires: POLARSSL_SSL_TLS_C
  *
- * This module is required for SSL/TLS PKCS #11 smartcard support.
+ * This module enables SSL/TLS PKCS #11 smartcard support.
  * Requires the presence of the PKCS#11 helper library (libpkcs11-helper)
 #define POLARSSL_PKCS11_C
  */
+
+/**
+ * \def POLARSSL_PKCS12_C
+ *
+ * Enable PKCS#12 PBE functions
+ * Adds algorithms for parsing PKCS#8 encrypted private keys
+ *
+ * Module:  library/pkcs12.c
+ * Caller:  library/x509parse.c
+ *
+ * Requires: POLARSSL_ASN1_PARSE_C, POLARSSL_CIPHER_C, POLARSSL_MD_C
+ * Can use:  POLARSSL_ARC4_C
+ *
+ * This module enables PKCS#12 functions.
+ */
+#define POLARSSL_PKCS12_C
 
 /**
  * \def POLARSSL_RSA_C
@@ -582,6 +818,7 @@
  *          library/x509parse.c
  *
  * This module adds support for SHA-224 and SHA-256.
+ * This module is required for the SSL/TLS 1.2 PRF function.
  */
 #define POLARSSL_SHA2_C
 
@@ -599,6 +836,18 @@
 #define POLARSSL_SHA4_C
 
 /**
+ * \def POLARSSL_SSL_CACHE_C
+ *
+ * Enable simple SSL cache implementation.
+ *
+ * Module:  library/ssl_cache.c
+ * Caller:
+ *
+ * Requires: POLARSSL_SSL_CACHE_C
+ */
+#define POLARSSL_SSL_CACHE_C
+
+/**
  * \def POLARSSL_SSL_CLI_C
  *
  * Enable the SSL/TLS client code.
@@ -612,7 +861,7 @@
  */
 #define POLARSSL_SSL_CLI_C
 
-/*
+/**
  * \def POLARSSL_SSL_SRV_C
  *
  * Enable the SSL/TLS server code.
@@ -681,6 +930,19 @@
 #define POLARSSL_X509_PARSE_C
 
 /**
+ * \def POLARSSL_X509_WRITE_C
+ *
+ * Enable X.509 buffer writing.
+ *
+ * Module:  library/x509write.c
+ *
+ * Requires: POLARSSL_BIGNUM_C, POLARSSL_RSA_C
+ *
+ * This module is required for X.509 certificate request writing.
+ */
+#define POLARSSL_X509_WRITE_C
+
+/**
  * \def POLARSSL_XTEA_C
  *
  * Enable the XTEA block cipher.
@@ -691,4 +953,56 @@
 #define POLARSSL_XTEA_C
 /* \} name */
 
+/**
+ * \name SECTION: Module configuration options
+ *
+ * This section allows for the setting of module specific sizes and
+ * configuration options. The default values are already present in the
+ * relevant header files and should suffice for the regular use cases.
+ * Our advice is to enable POLARSSL_CONFIG_OPTIONS and change values here
+ * only if you have a good reason and know the consequences.
+ *
+ * If POLARSSL_CONFIG_OPTIONS is undefined here the options in the module
+ * header file take precedence.
+ *
+ * Please check the respective header file for documentation on these
+ * parameters (to prevent duplicate documentation).
+ *
+ * Uncomment POLARSSL_CONFIG_OPTIONS to enable using the values defined here.
+ * \{
+ */
+//#define POLARSSL_CONFIG_OPTIONS   /**< Enable config.h module value configuration */
+
+#if defined(POLARSSL_CONFIG_OPTIONS)
+
+// MPI / BIGNUM options
+//
+#define POLARSSL_MPI_WINDOW_SIZE            6 /**< Maximum windows size used. */
+#define POLARSSL_MPI_MAX_SIZE             512 /**< Maximum number of bytes for usable MPIs. */
+
+// CTR_DRBG options
+//
+#define CTR_DRBG_ENTROPY_LEN               48 /**< Amount of entropy used per seed by default */
+#define CTR_DRBG_RESEED_INTERVAL        10000 /**< Interval before reseed is performed by default */
+#define CTR_DRBG_MAX_INPUT                256 /**< Maximum number of additional input bytes */
+#define CTR_DRBG_MAX_REQUEST             1024 /**< Maximum number of requested bytes per call */
+#define CTR_DRBG_MAX_SEED_INPUT           384 /**< Maximum size of (re)seed buffer */
+
+// Entropy options
+//
+#define ENTROPY_MAX_SOURCES                20 /**< Maximum number of sources supported */
+#define ENTROPY_MAX_GATHER                128 /**< Maximum amount requested from entropy sources */
+
+// SSL Cache options
+//
+#define SSL_CACHE_DEFAULT_TIMEOUT       86400 /**< 1 day  */
+#define SSL_CACHE_DEFAULT_MAX_ENTRIES      50 /**< Maximum entries in cache */
+
+// SSL options
+//
+#define SSL_MAX_CONTENT_LEN             16384 /**< Size of the input / output buffer */
+
+#endif /* POLARSSL_CONFIG_OPTIONS */
+
+/* \} name */
 #endif /* config.h */

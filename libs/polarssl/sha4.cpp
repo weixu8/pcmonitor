@@ -1,7 +1,7 @@
 /*
  *  FIPS-180-2 compliant SHA-384/512 implementation
  *
- *  Copyright (C) 2006-2010, Brainspark B.V.
+ *  Copyright (C) 2006-2013, Brainspark B.V.
  *
  *  This file is part of PolarSSL (http://www.polarssl.org)
  *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
@@ -28,15 +28,17 @@
  *  http://csrc.nist.gov/publications/fips/fips180-2/fips180-2.pdf
  */
 
-#include "config.h"
+#include "polarssl/config.h"
 
 #if defined(POLARSSL_SHA4_C)
 
-#include "sha4.h"
+#include "polarssl/sha4.h"
 
 #if defined(POLARSSL_FS_IO) || defined(POLARSSL_SELF_TEST)
 #include <stdio.h>
 #endif
+
+#if !defined(POLARSSL_SHA4_ALT)
 
 /*
  * 64-bit integer manipulation macros (big endian)
@@ -44,14 +46,14 @@
 #ifndef GET_UINT64_BE
 #define GET_UINT64_BE(n,b,i)                            \
 {                                                       \
-    (n) = ( (unsigned long64) (b)[(i)    ] << 56 )       \
-        | ( (unsigned long64) (b)[(i) + 1] << 48 )       \
-        | ( (unsigned long64) (b)[(i) + 2] << 40 )       \
-        | ( (unsigned long64) (b)[(i) + 3] << 32 )       \
-        | ( (unsigned long64) (b)[(i) + 4] << 24 )       \
-        | ( (unsigned long64) (b)[(i) + 5] << 16 )       \
-        | ( (unsigned long64) (b)[(i) + 6] <<  8 )       \
-        | ( (unsigned long64) (b)[(i) + 7]       );      \
+    (n) = ( (uint64_t) (b)[(i)    ] << 56 )       \
+        | ( (uint64_t) (b)[(i) + 1] << 48 )       \
+        | ( (uint64_t) (b)[(i) + 2] << 40 )       \
+        | ( (uint64_t) (b)[(i) + 3] << 32 )       \
+        | ( (uint64_t) (b)[(i) + 4] << 24 )       \
+        | ( (uint64_t) (b)[(i) + 5] << 16 )       \
+        | ( (uint64_t) (b)[(i) + 6] <<  8 )       \
+        | ( (uint64_t) (b)[(i) + 7]       );      \
 }
 #endif
 
@@ -72,7 +74,7 @@
 /*
  * Round constants
  */
-static const unsigned long64 K[80] =
+static const uint64_t K[80] =
 {
     UL64(0x428A2F98D728AE22),  UL64(0x7137449123EF65CD),
     UL64(0xB5C0FBCFEC4D3B2F),  UL64(0xE9B5DBA58189DBBC),
@@ -155,8 +157,8 @@ void sha4_starts( sha4_context *ctx, int is384 )
 static void sha4_process( sha4_context *ctx, const unsigned char data[128] )
 {
     int i;
-    unsigned long64 temp1, temp2, W[80];
-    unsigned long64 A, B, C, D, E, F, G, H;
+    uint64_t temp1, temp2, W[80];
+    uint64_t A, B, C, D, E, F, G, H;
 
 #define  SHR(x,n) (x >> n)
 #define ROTR(x,n) (SHR(x,n) | (x << (64 - n)))
@@ -235,15 +237,14 @@ void sha4_update( sha4_context *ctx, const unsigned char *input, size_t ilen )
     left = (unsigned int) (ctx->total[0] & 0x7F);
     fill = 128 - left;
 
-    ctx->total[0] += (unsigned long64) ilen;
+    ctx->total[0] += (uint64_t) ilen;
 
-    if( ctx->total[0] < (unsigned long64) ilen )
+    if( ctx->total[0] < (uint64_t) ilen )
         ctx->total[1]++;
 
     if( left && ilen >= fill )
     {
-        memcpy( (void *) (ctx->buffer + left),
-                (void *) input, fill );
+        memcpy( (void *) (ctx->buffer + left), input, fill );
         sha4_process( ctx, ctx->buffer );
         input += fill;
         ilen  -= fill;
@@ -258,10 +259,7 @@ void sha4_update( sha4_context *ctx, const unsigned char *input, size_t ilen )
     }
 
     if( ilen > 0 )
-    {
-        memcpy( (void *) (ctx->buffer + left),
-                (void *) input, ilen );
-    }
+        memcpy( (void *) (ctx->buffer + left), input, ilen );
 }
 
 static const unsigned char sha4_padding[128] =
@@ -282,7 +280,7 @@ static const unsigned char sha4_padding[128] =
 void sha4_finish( sha4_context *ctx, unsigned char output[64] )
 {
     size_t last, padn;
-    unsigned long64 high, low;
+    uint64_t high, low;
     unsigned char msglen[16];
 
     high = ( ctx->total[0] >> 61 )
@@ -295,7 +293,7 @@ void sha4_finish( sha4_context *ctx, unsigned char output[64] )
     last = (size_t)( ctx->total[0] & 0x7F );
     padn = ( last < 112 ) ? ( 112 - last ) : ( 240 - last );
 
-    sha4_update( ctx, (unsigned char *) sha4_padding, padn );
+    sha4_update( ctx, sha4_padding, padn );
     sha4_update( ctx, msglen, 16 );
 
     PUT_UINT64_BE( ctx->state[0], output,  0 );
@@ -311,6 +309,8 @@ void sha4_finish( sha4_context *ctx, unsigned char output[64] )
         PUT_UINT64_BE( ctx->state[7], output, 56 );
     }
 }
+
+#endif /* !POLARSSL_SHA4_ALT */
 
 /*
  * output = SHA-512( input buffer )

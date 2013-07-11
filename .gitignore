@@ -7,6 +7,9 @@
 *.o
 *.so
 *.jar
+*.sys
+*.lib
+*.pdb
 
 # Packages #
 ############

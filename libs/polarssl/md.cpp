@@ -27,15 +27,15 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "config.h"
+#include "polarssl/config.h"
 
 #if defined(POLARSSL_MD_C)
 
-#include "md.h"
-#include "md_wrap.h"
-#ifndef __KERNEL_MODE__
+#include "polarssl/md.h"
+#include "polarssl/md_wrap.h"
+
 #include <stdlib.h>
-#endif
+
 #if defined _MSC_VER && !defined strcasecmp
 #define strcasecmp _stricmp
 #endif
