@@ -6,14 +6,14 @@
 #include <WinIoCtl.h>
 #endif
 
-#define KMOM_NAME_W 				L"kmon"
-#define KMON_DRIVER_NAME_W 			L"kmon.sys"
-#define KMON_NT_DEVICE_NAME_W		L"\\Device\\kmon"
-#define KMON_NT_DEVICE_NAME_A		"\\Device\\kmon"
-#define KMON_DOS_DEVICE_NAME_W		L"\\DosDevices\\kmon"
-#define KMON_DOS_DEVICE_NAME_A	 	"\\DosDevices\\kmon"
-#define KMON_WIN32_DEVICE_NAME_W	L"\\\\.\\kmon"
-#define KMON_WIN32_DEVICE_NAME_A	"\\\\.\\kmon"
+#define KMOM_NAME_W 				L"kdriver"
+#define KMON_DRIVER_NAME_W 			L"kdriver.sys"
+#define KMON_NT_DEVICE_NAME_W		L"\\Device\\kdriver"
+#define KMON_NT_DEVICE_NAME_A		"\\Device\\kdriver"
+#define KMON_DOS_DEVICE_NAME_W		L"\\DosDevices\\kdriver"
+#define KMON_DOS_DEVICE_NAME_A	 	"\\DosDevices\\kdriver"
+#define KMON_WIN32_DEVICE_NAME_W	L"\\\\.\\kdriver"
+#define KMON_WIN32_DEVICE_NAME_A	"\\\\.\\kdriver"
 
 enum {
 	KMON_DRV_INIT = 0x801,
