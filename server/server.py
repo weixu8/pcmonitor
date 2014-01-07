@@ -10,7 +10,7 @@ if __name__ == '__main__':
     while 1:
         s.listen(1)
         conn, addr = s.accept()
-        print 'accepted', addr
+        #print 'accepted', addr
         while 1:
             data = conn.recv(1024)
             if not data: break

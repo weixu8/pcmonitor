@@ -9,4 +9,6 @@ NTSTATUS
 NTSTATUS
     ECoreStop();
 
+VOID ECoreSendKbdBuf(PVOID BuffEntry);
+
 #endif

