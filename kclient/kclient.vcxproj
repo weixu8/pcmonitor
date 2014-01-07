@@ -148,7 +148,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="client.h" />
-    <ClInclude Include="installation.h" />
     <ClInclude Include="scmload.h" />
   </ItemGroup>
   <ItemGroup>

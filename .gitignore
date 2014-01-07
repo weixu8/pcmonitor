@@ -50,3 +50,4 @@ build/
 #vs 2013 files #
 *.sdf
 *.opensdf
+*.suo

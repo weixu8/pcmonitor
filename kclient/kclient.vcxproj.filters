@@ -18,9 +18,6 @@
     <ClInclude Include="client.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="installation.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="scmload.h">
       <Filter>Header Files</Filter>
     </ClInclude>

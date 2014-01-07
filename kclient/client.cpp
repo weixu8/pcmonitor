@@ -2,17 +2,9 @@
 #include "scmload.h"
 #include <stdio.h>
 #include "..\kdriver\h\drvioctl.h"
-#include "installation.h"
 
-#define EYE_BINARY_W (EYE_INSTALLATION_DIR EYE_DRIVER_NAME_W)
+#define KMON_BINARY_W (L".\\"KMON_DRIVER_NAME_W)
 
-
-DWORD NTAPI InstallDrv(int argc, char *argv[]);
-DWORD NTAPI RemoveDrv(int argc, char *argv[]);
-DWORD NTAPI StartDrv(int argc, char *argv[]);
-DWORD NTAPI StopDrv(int argc, char *argv[]);
-DWORD NTAPI DrvInit(int argc, char *argv[]);
-DWORD NTAPI DrvRelease(int argc, char *argv[]);
 
 HANDLE COpenDriver()
 {
@@ -105,7 +97,7 @@ DWORD NTAPI CInstallDrv()
 	DWORD err;
 	WCHAR PathName[MAX_PATH];
 
-	err = GetFullPathName(KMON_INSTALLATION_DIR_W, MAX_PATH, PathName, NULL);
+	err = GetFullPathName(KMON_BINARY_W, MAX_PATH, PathName, NULL);
 	if (err == 0) {
 		printf("GetFullPathName error\n");
 		return -1;
