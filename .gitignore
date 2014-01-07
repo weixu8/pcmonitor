@@ -42,3 +42,11 @@ Thumbs.db
 *.*~
 *.pyc
 *.oacr.*
+
+
+# Our build files #
+build/
+
+#vs 2013 files #
+*.sdf
+*.opensdf
