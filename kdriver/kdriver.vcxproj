@@ -320,6 +320,7 @@
   <ItemGroup>
     <ClCompile Include="driver.c" />
     <ClCompile Include="ecore.c" />
+    <ClCompile Include="inject.c" />
     <ClCompile Include="keybrd.c" />
     <ClCompile Include="klogger.c" />
     <ClCompile Include="mwsk.c" />
@@ -330,9 +331,11 @@
     <ClInclude Include="inc\basictypes.h" />
     <ClInclude Include="inc\drvmain.h" />
     <ClInclude Include="inc\ecore.h" />
+    <ClInclude Include="inc\inject.h" />
     <ClInclude Include="inc\keybrd.h" />
     <ClInclude Include="inc\klogger.h" />
     <ClInclude Include="inc\mwsk.h" />
+    <ClInclude Include="inc\ntapiex.h" />
     <ClInclude Include="inc\systhread.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

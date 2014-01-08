@@ -29,6 +29,9 @@
     <ClCompile Include="systhread.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="inject.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\basictypes.h">
@@ -53,6 +56,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="h\drvioctl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\inject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\ntapiex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
