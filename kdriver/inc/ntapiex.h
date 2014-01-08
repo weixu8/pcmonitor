@@ -22,18 +22,54 @@ ZwQuerySystemInformation(ULONG InfoClass, PVOID pInfo, ULONG InfoSize, PULONG pR
 
 typedef struct _SYSTEM_PROCESS_INFORMATION {
 	ULONG NextEntryOffset;
-	BYTE Reserved1[52];
-	PVOID Reserved2[3];
+	ULONG NumberOfThreads;
+	LARGE_INTEGER SpareLi1;
+	LARGE_INTEGER SpareLi2;
+	LARGE_INTEGER SpareLi3;
+	LARGE_INTEGER CreateTime;
+	LARGE_INTEGER UserTime;
+	LARGE_INTEGER KernelTime;
+	UNICODE_STRING ImageName;
+	KPRIORITY BasePriority;
 	HANDLE UniqueProcessId;
-	PVOID Reserved3;
+	HANDLE InheritedFromUniqueProcessId;
 	ULONG HandleCount;
-	BYTE Reserved4[4];
-	PVOID Reserved5[11];
+	ULONG SessionId;
+	ULONG_PTR PageDirectoryBase;
+	SIZE_T PeakVirtualSize;
+	SIZE_T VirtualSize;
+	ULONG PageFaultCount;
+	SIZE_T PeakWorkingSetSize;
+	SIZE_T WorkingSetSize;
+	SIZE_T QuotaPeakPagedPoolUsage;
+	SIZE_T QuotaPagedPoolUsage;
+	SIZE_T QuotaPeakNonPagedPoolUsage;
+	SIZE_T QuotaNonPagedPoolUsage;
+	SIZE_T PagefileUsage;
 	SIZE_T PeakPagefileUsage;
 	SIZE_T PrivatePageCount;
-	LARGE_INTEGER Reserved6[6];
+	LARGE_INTEGER ReadOperationCount;
+	LARGE_INTEGER WriteOperationCount;
+	LARGE_INTEGER OtherOperationCount;
+	LARGE_INTEGER ReadTransferCount;
+	LARGE_INTEGER WriteTransferCount;
+	LARGE_INTEGER OtherTransferCount;
 } SYSTEM_PROCESS_INFORMATION, *PSYSTEM_PROCESS_INFORMATION;
 
+
+typedef struct _SYSTEM_THREAD_INFORMATION {
+	LARGE_INTEGER KernelTime;
+	LARGE_INTEGER UserTime;
+	LARGE_INTEGER CreateTime;
+	ULONG WaitTime;
+	PVOID StartAddress;
+	CLIENT_ID ClientId;
+	KPRIORITY Priority;
+	LONG BasePriority;
+	ULONG ContextSwitches;
+	ULONG ThreadState;
+	ULONG WaitReason;
+} SYSTEM_THREAD_INFORMATION, *PSYSTEM_THREAD_INFORMATION;
 
 typedef enum _SYSTEM_INFORMATION_CLASS {
 	SystemBasicInformation = 0,
@@ -48,6 +84,72 @@ typedef enum _SYSTEM_INFORMATION_CLASS {
 	SystemPolicyInformation = 134,
 } SYSTEM_INFORMATION_CLASS;
 
+typedef enum _KAPC_ENVIRONMENT {
+	OriginalApcEnvironment,
+	AttachedApcEnvironment,
+	CurrentApcEnvironment,
+	InsertApcEnvironment
+} KAPC_ENVIRONMENT;
 
+
+typedef
+VOID
+(*PKNORMAL_ROUTINE) (
+IN PVOID NormalContext,
+IN PVOID SystemArgument1,
+IN PVOID SystemArgument2
+);
+
+
+typedef
+VOID
+(*PKNORMAL_ROUTINE) (
+IN PVOID NormalContext,
+IN PVOID SystemArgument1,
+IN PVOID SystemArgument2
+);
+
+typedef
+VOID
+(*PKKERNEL_ROUTINE) (
+IN struct _KAPC *Apc,
+IN OUT PKNORMAL_ROUTINE *NormalRoutine,
+IN OUT PVOID *NormalContext,
+IN OUT PVOID *SystemArgument1,
+IN OUT PVOID *SystemArgument2
+);
+
+typedef
+VOID
+(*PKRUNDOWN_ROUTINE) (
+IN struct _KAPC *Apc
+);
+
+NTSYSAPI
+VOID
+KeInitializeApc(
+__out PRKAPC Apc,
+__in PRKTHREAD Thread,
+__in KAPC_ENVIRONMENT Environment,
+__in PKKERNEL_ROUTINE KernelRoutine,
+__in_opt PKRUNDOWN_ROUTINE RundownRoutine,
+__in_opt PKNORMAL_ROUTINE NormalRoutine,
+__in_opt KPROCESSOR_MODE ProcessorMode,
+__in_opt PVOID NormalContext
+);
+
+
+NTSYSAPI
+BOOLEAN
+KeInsertQueueApc(
+__inout PRKAPC Apc,
+__in_opt PVOID SystemArgument1,
+__in_opt PVOID SystemArgument2,
+__in KPRIORITY Increment
+);
+
+NTSYSAPI
+PVOID
+PsGetThreadWin32Thread(PETHREAD);
 
 #endif

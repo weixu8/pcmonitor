@@ -2,16 +2,184 @@
 #include <inc/klogger.h>
 #include <inc/ecore.h>
 #include <inc/ntapiex.h>
+#include <injectstub/h/stub.h>
 
 #define __SUBCOMPONENT__ "inject"
 #define MODULE_TAG 'injc'
 
 NTSTATUS
-	InjectDllProcess(HANDLE ProcessHandle, PEPROCESS Process, PUNICODE_STRING DllPath)
+	InjectProcessAllocateCode(HANDLE ProcessHandle, PVOID *pBase, SIZE_T *pSize)
+{
+	NTSTATUS Status;
+	PVOID BaseAddress = NULL;
+	SIZE_T RegionSize = 16 * PAGE_SIZE;
+
+	Status = ZwAllocateVirtualMemory(ProcessHandle, &BaseAddress, 0, &RegionSize, MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "ZwAllocateVirtualMemory failed for procH=%p, error=%x\n", ProcessHandle, Status);
+		return Status;
+	}
+	
+	*pBase = BaseAddress;
+	*pSize = RegionSize;
+
+	return Status;
+}
+
+NTSTATUS
+	InjectGetThreadByThreadInfo(IN PSYSTEM_THREAD_INFORMATION ThreadInfo, PETHREAD *pThread)
+{
+	PETHREAD Thread = NULL;
+	NTSTATUS Status;
+
+	Status = PsLookupThreadByThreadId(ThreadInfo->ClientId.UniqueThread, &Thread);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "cant lookup thread by id=%p", ThreadInfo->ClientId.UniqueThread);
+		return Status;
+	}
+
+	*pThread = Thread;
+	return STATUS_SUCCESS;
+}
+
+VOID
+InjectApcKernelRoutine(
+	IN PKAPC Apc,
+	IN PKNORMAL_ROUTINE *NormalRoutine,
+	IN PVOID *NormalContext,
+	IN PVOID *SystemArgument1,
+	IN PVOID *SystemArgument2
+)
+{
+	UNREFERENCED_PARAMETER(NormalRoutine);
+	UNREFERENCED_PARAMETER(NormalContext);
+	UNREFERENCED_PARAMETER(SystemArgument1);
+	UNREFERENCED_PARAMETER(SystemArgument2);
+
+	KLog(LInfo, "InjectApcKernelRoutine");
+
+	ExFreePool(Apc);
+}
+
+NTSTATUS
+	InjectDllProcessThread(HANDLE ProcessHandle, PEPROCESS Process, PETHREAD Thread, PUNICODE_STRING DllPath, ULONG_PTR stubStart, SIZE_T stubSize)
+{
+	PKAPC Apc = NULL;
+	ULONG Index = 0;
+	LARGE_INTEGER Timeout;
+	BOOLEAN ApcQueued = FALSE;
+
+	Apc = ExAllocatePoolWithTag(NonPagedPool, sizeof(KAPC), MODULE_TAG);
+	if (Apc == NULL) {
+		KLog(LError, "No memory");
+		return STATUS_NO_MEMORY;
+	}
+
+	KeInitializeApc(Apc,
+		Thread,
+		OriginalApcEnvironment,
+		InjectApcKernelRoutine,
+		NULL,
+		(PVOID)(stubStart + sizeof(STUB_DATA)),
+		UserMode,
+		NULL);
+
+	for (Index = 0; Index < 20; Index++) {
+		if (KeInsertQueueApc(Apc,
+			NULL,
+			NULL,
+			2)) {
+			ApcQueued = TRUE;
+			break;
+		}
+
+		KLog(LInfo, "KeInsertQueueApc failed index=%x", Index);
+		Timeout.QuadPart = (LONGLONG)-100;
+		KeDelayExecutionThread(KernelMode, FALSE, &Timeout);
+	}
+
+	return (ApcQueued) ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
+}
+
+NTSTATUS
+	InjectDllProcess(HANDLE ProcessHandle, PEPROCESS Process, PSYSTEM_PROCESS_INFORMATION ProcInfo, ULONG_PTR ProcInfoBarrier, PUNICODE_STRING DllPath)
 {
 
+	NTSTATUS Status;
+	SIZE_T pStubSize = 0;
+	KAPC_STATE ApcState;
+	ULONG Index = 0;
+	PETHREAD Thread = NULL;
+	ULONG InjectedCount = 0;
+	PSTUB_DATA pStubData = NULL;
+
 	KLog(LInfo, "ProcH=%p, proc=%p, DllPath=%wZ", ProcessHandle, Process, DllPath);
-	return STATUS_NOT_IMPLEMENTED;
+
+	Status = InjectProcessAllocateCode(ProcessHandle, &pStubData, &pStubSize);
+	if (!NT_SUCCESS(Status)) {
+		return Status;
+	}
+
+	KLog(LInfo, "pStubCode=%p, pStubSize=%x", pStubData, pStubSize);
+
+	KeStackAttachProcess(Process, &ApcState);
+	RtlCopyMemory(pStubData, (PVOID)&stubStart, (ULONG)stubSize);
+	KeUnstackDetachProcess(&ApcState);
+
+	PSYSTEM_THREAD_INFORMATION ThreadInfo = (PSYSTEM_THREAD_INFORMATION)((ULONG_PTR)ProcInfo + sizeof(SYSTEM_PROCESS_INFORMATION));
+
+	for (Index = 0; Index < ProcInfo->NumberOfThreads; Index++) {
+		if ((ProcInfo->NextEntryOffset != 0) && ((ULONG_PTR)ThreadInfo + sizeof(SYSTEM_THREAD_INFORMATION)) > ((ULONG_PTR)ProcInfo + ProcInfo->NextEntryOffset))
+			break;
+
+		if (((ULONG_PTR)ThreadInfo + sizeof(SYSTEM_THREAD_INFORMATION)) > ProcInfoBarrier)
+			break;
+
+		Status = InjectGetThreadByThreadInfo(ThreadInfo, &Thread);
+		if (!NT_SUCCESS(Status))
+			continue;
+
+		if (PsGetThreadProcessId(Thread) != PsGetProcessId(Process))
+			goto _next_thread;
+
+		KLog(LInfo, "found thread %p for injection", Thread);
+
+		if (PsGetThreadWin32Thread(Thread) != NULL) {
+			Status = InjectDllProcessThread(ProcessHandle, Process, Thread, DllPath, (ULONG_PTR)pStubData, stubSize);
+			if (!NT_SUCCESS(Status))
+				KLog(LError, "InjectDllProcessThread failed with err=%x", Status);
+			else 
+				InjectedCount++;
+		}
+
+_next_thread:		
+		ObDereferenceObject(Thread);
+		ThreadInfo = (PSYSTEM_THREAD_INFORMATION)((ULONG_PTR)ThreadInfo + sizeof(SYSTEM_THREAD_INFORMATION));
+	}
+
+	KLog(LInfo, "InjectedCount=%x", InjectedCount);
+	if (InjectedCount > 0) {
+		LARGE_INTEGER Timeout;
+
+		Timeout.QuadPart = (LONGLONG)-5000;
+		KeDelayExecutionThread(KernelMode, FALSE, &Timeout);
+
+		KeStackAttachProcess(Process, &ApcState);
+		Status = (pStubData->Inited) ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
+		KeUnstackDetachProcess(&ApcState);
+		if (NT_SUCCESS(Status))
+			KLog(LInfo, "Injection SUCCESS for proc=%p", Process);
+
+		return Status;
+	} else {
+		pStubSize = 0;
+		Status = ZwFreeVirtualMemory(ProcessHandle, &pStubData, &pStubSize, MEM_RELEASE);
+		if (!NT_SUCCESS(Status)) {
+			KLog(LError, "ZwFreeVirtualMemory for addr=%p failed with err=%x", pStubData, Status);
+		}
+	}
+
+	return STATUS_UNSUCCESSFUL;
 }
 
 NTSTATUS
@@ -94,7 +262,7 @@ NTSTATUS
 }
 
 NTSTATUS
-InjectCheckProcessAndInjectDll(PEPROCESS Process, PUNICODE_STRING ProcessPrefix, PUNICODE_STRING DllPath)
+InjectCheckProcessAndInjectDll(PEPROCESS Process, PSYSTEM_PROCESS_INFORMATION ProcInfo, ULONG_PTR ProcInfoBarrier, PUNICODE_STRING ProcessPrefix, PUNICODE_STRING DllPath)
 {
 	NTSTATUS Status;
 	PUNICODE_STRING pImageFileName = NULL;
@@ -147,7 +315,7 @@ InjectCheckProcessAndInjectDll(PEPROCESS Process, PUNICODE_STRING ProcessPrefix,
 		goto cleanup;
 	}
 
-	Status = InjectDllProcess(ProcessHandle, Process, DllPath);
+	Status = InjectDllProcess(ProcessHandle, Process, ProcInfo, ProcInfoBarrier, DllPath);
 	if (!NT_SUCCESS(Status)) {
 		KLog(LError, "Can't inject dll for process=%p, name=%wZ, error=%x", Process, &ImageFileNameSz, Status);
 	}
@@ -177,6 +345,7 @@ NTSTATUS
 	ULONG ProcInfoSize = 0;
 	PSYSTEM_PROCESS_INFORMATION CurrProcInfo = NULL;
 	ULONG_PTR NextEntryAddr = 0;
+	ULONG_PTR ProcInfoBarrier = 0;
 
 	Status = InjectQueryAllProcessInfo(&ProcInfo, &ProcInfoSize);
 	if (!NT_SUCCESS(Status)) {
@@ -184,6 +353,8 @@ NTSTATUS
 	}
 
 	CurrProcInfo = ProcInfo;
+	ProcInfoBarrier = (ULONG_PTR)ProcInfo + ProcInfoSize;
+
 	do {
 		Status = PsLookupProcessByProcessId(CurrProcInfo->UniqueProcessId, &Process);
 		if (!NT_SUCCESS(Status)) {
@@ -192,7 +363,7 @@ NTSTATUS
 		}
 		KLog(LInfo, "found proc %p by pid=%p", Process, CurrProcInfo->UniqueProcessId);
 
-		Status = InjectCheckProcessAndInjectDll(Process, ProcessPrefix, DllPath);
+		Status = InjectCheckProcessAndInjectDll(Process, CurrProcInfo, ProcInfoBarrier, ProcessPrefix, DllPath);
 		if (!NT_SUCCESS(Status)) {
 			goto _deref_next_process;
 		}
@@ -205,7 +376,7 @@ _next_process:
 		if (NextEntryAddr < ((ULONG_PTR)CurrProcInfo + sizeof(SYSTEM_PROCESS_INFORMATION)))
 			break;
 
-		if ((NextEntryAddr + sizeof(SYSTEM_PROCESS_INFORMATION)) > ((ULONG_PTR)ProcInfo + ProcInfoSize))
+		if ((NextEntryAddr + sizeof(SYSTEM_PROCESS_INFORMATION)) > ProcInfoBarrier)
 			break;
 
 		CurrProcInfo = (PSYSTEM_PROCESS_INFORMATION)NextEntryAddr;

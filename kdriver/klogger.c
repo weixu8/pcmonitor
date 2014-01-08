@@ -287,6 +287,7 @@ VOID KLogCtx2(PKLOG_CONTEXT Log, int level, PCHAR component, PCHAR file, ULONG l
         TimeFields.Second, TimeFields.Milliseconds);
 
     WriteMsg(&pos,&left,"t%x",PsGetCurrentThreadId());
+	WriteMsg(&pos, &left, " i%x", KeGetCurrentIrql());
     WriteMsg(&pos,&left," %s():%s:%d: ",func,TruncatePath(file),line);
 
     res = WriteMsg2(&pos,&left, fmt, args);
