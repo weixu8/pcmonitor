@@ -64,7 +64,7 @@ InjectApcKernelRoutine(
 }
 
 NTSTATUS
-InjectDllProcessThreadQueueApc(HANDLE ProcessHandle, PEPROCESS Process, PETHREAD Thread, ULONG_PTR stubStart, SIZE_T stubSize)
+	InjectDllProcessThreadQueueApc(HANDLE ProcessHandle, PEPROCESS Process, PETHREAD Thread, ULONG_PTR stubStart, SIZE_T stubSize)
 {
 	PKAPC Apc = NULL;
 	ULONG Index = 0;
@@ -98,7 +98,7 @@ InjectDllProcessThreadQueueApc(HANDLE ProcessHandle, PEPROCESS Process, PETHREAD
 		KLog(LInfo, "KeInsertQueueApc failed index=%x", Index);
 
 		RtlZeroMemory(&Timeout, sizeof(Timeout));
-		Timeout.LowPart = -500;//50ms
+		Timeout.QuadPart = -20*1000*10;//20ms
 
 		KeDelayExecutionThread(KernelMode, FALSE, &Timeout);
 	}
@@ -197,7 +197,7 @@ NTSTATUS
 }
 
 NTSTATUS
-InjectDllProcess(HANDLE ProcessHandle, PEPROCESS Process, PSYSTEM_PROCESS_INFORMATION ProcInfo, ULONG_PTR ProcInfoBarrier, PUNICODE_STRING DllPath, PUNICODE_STRING DllName)
+	InjectDllProcess(HANDLE ProcessHandle, PEPROCESS Process, PSYSTEM_PROCESS_INFORMATION ProcInfo, ULONG_PTR ProcInfoBarrier, PUNICODE_STRING DllPath, PUNICODE_STRING DllName)
 {
 
 	NTSTATUS Status;
@@ -261,8 +261,7 @@ _next_thread:
 		LARGE_INTEGER Timeout;
 
 		RtlZeroMemory(&Timeout, sizeof(Timeout));
-		Timeout.LowPart = -5000;//500ms
-
+		Timeout.QuadPart = -500*1000*10;//500ms
 		KeDelayExecutionThread(KernelMode, FALSE, &Timeout);
 
 		KeStackAttachProcess(Process, &ApcState);
@@ -333,7 +332,7 @@ NTSTATUS
 }
 
 NTSTATUS
-InjectCheckProcessAndInjectDll(PEPROCESS Process, PSYSTEM_PROCESS_INFORMATION ProcInfo, ULONG_PTR ProcInfoBarrier, PUNICODE_STRING ProcessPrefix, PUNICODE_STRING DllPath, PUNICODE_STRING DllName)
+	InjectCheckProcessAndInjectDll(PEPROCESS Process, PSYSTEM_PROCESS_INFORMATION ProcInfo, ULONG_PTR ProcInfoBarrier, PUNICODE_STRING ProcessPrefix, PUNICODE_STRING DllPath, PUNICODE_STRING DllName)
 {
 	NTSTATUS Status;
 	PUNICODE_STRING pImageFileName = NULL;
@@ -408,7 +407,7 @@ cleanup:
 }
 
 NTSTATUS
-InjectFindAllProcessesAndInjectDll(PUNICODE_STRING ProcessPrefix, PUNICODE_STRING DllPath, PUNICODE_STRING DllName)
+	InjectFindAllProcessesAndInjectDll(PUNICODE_STRING ProcessPrefix, PUNICODE_STRING DllPath, PUNICODE_STRING DllName)
 {
 	PEPROCESS Process = NULL;
 	NTSTATUS Status;

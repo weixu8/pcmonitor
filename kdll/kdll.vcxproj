@@ -167,6 +167,7 @@
     <ClInclude Include="debug.h" />
     <ClInclude Include="monitor.h" />
     <ClInclude Include="project.h" />
+    <ClInclude Include="screenshot.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
@@ -186,6 +187,7 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="monitor.cpp" />
+    <ClCompile Include="screenshot.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
