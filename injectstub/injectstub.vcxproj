@@ -51,11 +51,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="stub.asm">
-      <FileType>Document</FileType>
-    </MASM>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="h\stub.h" />
   </ItemGroup>
   <ItemGroup>
