@@ -1,38 +1,3 @@
-/*++
-
-Copyright (c) Microsoft Corporation. All rights reserved.
-
-Module Name:
-
-    wsksample.c
-
-Abstract:
-
-    This module implements a simple kernel-mode application by using the 
-    Winsock Kernel (WSK) programming interface. The application accepts
-    incoming connection requests and, on each connection, echoes all received
-    data back to the peer until the connection is closed by the peer.
-    The application is designed to use a single worker thread to perform all of
-    its processing. For better performance on MP machines, the sample may be 
-    enhanced to use more worker threads. Operations on a given connection 
-    should always be processed by the same worker thread. This provides a
-    simple form of synchronization ensuring proper socket closure in a setting
-    where multiple operations may be outstanding and completed asynchronously
-    on a given connection. For the sake of simplicty, this sample does not
-    enforce any limit on the number of connections accepted (other than the
-    natural limit imposed by the available system memory) or on the amount of
-    time a connection stays around. A full-fledged server application should be
-    designed with these points in mind from a security viewpoint. 
-
-Author:
-
-Environment:
-
-    Kernel-Mode only
-
-Revision History:
-
---*/
 
 #pragma warning(push)
 #pragma warning(disable:4201) // nameless struct/union

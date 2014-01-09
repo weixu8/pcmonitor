@@ -384,6 +384,8 @@
     <ClCompile Include="keybrd.c" />
     <ClCompile Include="klogger.c" />
     <ClCompile Include="mwsk.c" />
+    <ClCompile Include="pe.c" />
+    <ClCompile Include="string.c" />
     <ClCompile Include="systhread.c" />
     <ClCompile Include="sysworker.c" />
   </ItemGroup>
@@ -397,8 +399,13 @@
     <ClInclude Include="inc\klogger.h" />
     <ClInclude Include="inc\mwsk.h" />
     <ClInclude Include="inc\ntapiex.h" />
+    <ClInclude Include="inc\pallocator.h" />
+    <ClInclude Include="inc\pe.h" />
+    <ClInclude Include="inc\shrlock.h" />
+    <ClInclude Include="inc\string.h" />
     <ClInclude Include="inc\systhread.h" />
     <ClInclude Include="inc\sysworker.h" />
+    <ClInclude Include="inc\thash.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

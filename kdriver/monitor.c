@@ -1,10 +1,6 @@
 #include <inc/klogger.h>
-#include <inc/mwsk.h>
 #include <inc/monitor.h>
-#include <inc/systhread.h>
-#include <inc/keybrd.h>
-#include <inc/inject.h>
-#include <inc/sysworker.h>
+
 
 #define __SUBCOMPONENT__ "ecore"
 
@@ -92,6 +88,7 @@ VOID
 	KeInitializeGuardedMutex(&Monitor->Mutex);
 	SysWorkerInit(&Monitor->InjectWorker);
 	SysWorkerInit(&Monitor->NetWorker);
+
 	Monitor->State = MONITOR_STATE_STOPPED;
 }
 
