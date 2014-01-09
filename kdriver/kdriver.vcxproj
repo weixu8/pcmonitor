@@ -156,61 +156,109 @@
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath_x86);</ExecutablePath>
+    <IncludePath>$(WindowsSDK_IncludePath);$(ProjectDir);$(CRT_INC_PATH);$(DDK_INC_PATH)</IncludePath>
+    <LibraryPath>$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|Win32'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath_x86);</ExecutablePath>
+    <IncludePath>$(WindowsSDK_IncludePath);$(ProjectDir);$(CRT_INC_PATH);$(DDK_INC_PATH)</IncludePath>
+    <LibraryPath>$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|Win32'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath_x86);</ExecutablePath>
+    <IncludePath>$(WindowsSDK_IncludePath);$(ProjectDir);$(CRT_INC_PATH);$(DDK_INC_PATH)</IncludePath>
+    <LibraryPath>$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath_x86);</ExecutablePath>
+    <IncludePath>$(WindowsSDK_IncludePath);$(ProjectDir);$(CRT_INC_PATH);$(DDK_INC_PATH)</IncludePath>
+    <LibraryPath>$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath_x86);</ExecutablePath>
+    <IncludePath>$(WindowsSDK_IncludePath);$(ProjectDir);$(CRT_INC_PATH);$(DDK_INC_PATH)</IncludePath>
+    <LibraryPath>$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath_x86);</ExecutablePath>
+    <IncludePath>$(WindowsSDK_IncludePath);$(ProjectDir);$(CRT_INC_PATH);$(DDK_INC_PATH)</IncludePath>
+    <LibraryPath>$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath_x64);$(VC_ExecutablePath_x64)</ExecutablePath>
+    <IncludePath>$(WindowsSDK_IncludePath);$(ProjectDir);$(CRT_INC_PATH);$(DDK_INC_PATH)</IncludePath>
+    <LibraryPath>$(WindowsSDK_LibraryPath_x64);</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath_x64);$(VC_ExecutablePath_x64)</ExecutablePath>
+    <IncludePath>$(WindowsSDK_IncludePath);$(ProjectDir);$(CRT_INC_PATH);$(DDK_INC_PATH)</IncludePath>
+    <LibraryPath>$(WindowsSDK_LibraryPath_x64);</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath_x64);$(VC_ExecutablePath_x64)</ExecutablePath>
+    <IncludePath>$(WindowsSDK_IncludePath);$(ProjectDir);$(CRT_INC_PATH);$(DDK_INC_PATH)</IncludePath>
+    <LibraryPath>$(WindowsSDK_LibraryPath_x64);</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath_x64);$(VC_ExecutablePath_x64)</ExecutablePath>
+    <IncludePath>$(WindowsSDK_IncludePath);$(ProjectDir);$(CRT_INC_PATH);$(DDK_INC_PATH)</IncludePath>
+    <LibraryPath>$(WindowsSDK_LibraryPath_x64);</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <LibraryPath>$(WindowsSDK_LibraryPath_x64);</LibraryPath>
+    <ExcludePath />
+    <ExecutablePath>$(WindowsSDK_ExecutablePath_x64);$(VC_ExecutablePath_x64)</ExecutablePath>
+    <IncludePath>$(WindowsSDK_IncludePath);$(ProjectDir);$(CRT_INC_PATH);$(DDK_INC_PATH)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath_x64);$(VC_ExecutablePath_x64)</ExecutablePath>
+    <IncludePath>$(WindowsSDK_IncludePath);$(ProjectDir);$(CRT_INC_PATH);$(DDK_INC_PATH)</IncludePath>
+    <LibraryPath>$(WindowsSDK_LibraryPath_x64);</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">
     <ClCompile>

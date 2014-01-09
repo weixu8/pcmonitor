@@ -70,21 +70,37 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath_x86)</ExecutablePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x64);$(WindowsSDK_ExecutablePath_x64)</ExecutablePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath_x86)</ExecutablePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x64);$(WindowsSDK_ExecutablePath_x64)</ExecutablePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

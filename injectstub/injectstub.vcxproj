@@ -58,6 +58,11 @@
   <ItemGroup>
     <ClInclude Include="h\stub.h" />
   </ItemGroup>
+  <ItemGroup>
+    <MASM Include="stub.asm">
+      <FileType>Document</FileType>
+    </MASM>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{F961B3BA-6212-4FE0-B0EC-85C4693204A9}</ProjectGuid>
     <TemplateGuid>{0a049372-4c4d-4ea0-a64e-dc6ad88ceca1}</TemplateGuid>
@@ -149,50 +154,98 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x64);$(WindowsSDK_ExecutablePath_x64)</ExecutablePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|x64'">
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x64);$(WindowsSDK_ExecutablePath_x64)</ExecutablePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x64);$(WindowsSDK_ExecutablePath_x64)</ExecutablePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|x64'">
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x64);$(WindowsSDK_ExecutablePath_x64)</ExecutablePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x64);$(WindowsSDK_ExecutablePath_x64)</ExecutablePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|x64'">
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x64);$(WindowsSDK_ExecutablePath_x64)</ExecutablePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|Win32'">
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath_x86)</ExecutablePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath_x86)</ExecutablePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath_x86)</ExecutablePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|Win32'">
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath_x86)</ExecutablePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'">
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath_x86)</ExecutablePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|Win32'">
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
+    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath_x86)</ExecutablePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+    <ExcludePath />
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">
     <MASM>
