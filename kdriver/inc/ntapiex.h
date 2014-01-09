@@ -1,5 +1,4 @@
-#ifndef __MNTAPIEX_H__
-#define __MNTAPIEX_H__
+#pragma once
 
 #include <inc/drvmain.h>
 
@@ -164,5 +163,3 @@ NTSYSAPI
 PIMAGE_NT_HEADERS
 RtlImageNtHeader(PVOID ImageBase);
 
-
-#endif

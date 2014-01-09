@@ -1,6 +1,4 @@
-#ifndef __SYS_THREAD_H__
-#define __SYS_THREAD_H__
-
+#pragma once
 
 #include <inc/drvmain.h>
 
@@ -17,6 +15,9 @@ typedef struct _SYSTHREAD {
 } SYSTHREAD, *PSYSTHREAD;
 
 VOID
+	SysThreadInit(PSYSTHREAD ThreadCtx);
+
+VOID
 	SysThreadSignal(PSYSTHREAD ThreadCtx);
 	
 
@@ -26,4 +27,3 @@ NTSTATUS
 VOID
 	SysThreadStop(PSYSTHREAD ThreadCtx);
 
-#endif

@@ -379,24 +379,26 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="driver.c" />
-    <ClCompile Include="ecore.c" />
+    <ClCompile Include="monitor.c" />
     <ClCompile Include="inject.c" />
     <ClCompile Include="keybrd.c" />
     <ClCompile Include="klogger.c" />
     <ClCompile Include="mwsk.c" />
     <ClCompile Include="systhread.c" />
+    <ClCompile Include="sysworker.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="h\drvioctl.h" />
     <ClInclude Include="inc\basictypes.h" />
     <ClInclude Include="inc\drvmain.h" />
-    <ClInclude Include="inc\ecore.h" />
+    <ClInclude Include="inc\monitor.h" />
     <ClInclude Include="inc\inject.h" />
     <ClInclude Include="inc\keybrd.h" />
     <ClInclude Include="inc\klogger.h" />
     <ClInclude Include="inc\mwsk.h" />
     <ClInclude Include="inc\ntapiex.h" />
     <ClInclude Include="inc\systhread.h" />
+    <ClInclude Include="inc\sysworker.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,6 +1,3 @@
-#ifndef __SCMLOAD_H__
-#define __SCMLOAD_H__
-
 #pragma once
 
 #include <Windows.h>
@@ -18,5 +15,3 @@ BOOL ScmStartDriver(SC_HANDLE  scm, LPCTSTR DriverName);
 // Функция останова драйвера на основе SCM вызовов
 BOOL ScmStopDriver(SC_HANDLE  scm, LPCTSTR DriverName);
 
-
-#endif

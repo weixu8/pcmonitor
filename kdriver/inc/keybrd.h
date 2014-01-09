@@ -1,5 +1,4 @@
-#ifndef __MKEYBOARD_H__
-#define __MKEYBOARD_H__
+#pragma once
 
 #include <inc/drvmain.h>
 
@@ -32,5 +31,3 @@ VOID
 	
 PKBD_BUFF_ENTRY
     KbdBuffGet(BOOLEAN bWait);
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef __MWSK_H__
-#define __MWSK_H__
+#pragma once
 
 #include <inc/drvmain.h>
 
@@ -94,4 +93,3 @@ NTSTATUS
 #define ntohs(x)    _byteswap_ushort((USHORT)(x))
 #define htonl(x)    _byteswap_ulong((ULONG)(x))
 #define ntohl(x)    _byteswap_ulong((ULONG)(x))
-#endif

@@ -1,5 +1,3 @@
-#ifndef __DRVIOCTL_H__
-#define __DRVIOCTL_H__
 #pragma once
 
 #ifdef _WINDOWS
@@ -26,4 +24,3 @@ enum {
 #define IOCTL_KMON_RELEASE CTL_CODE ( \
 	FILE_DEVICE_UNKNOWN, KMON_DRV_RELEASE, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
-#endif

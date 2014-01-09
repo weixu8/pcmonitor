@@ -49,6 +49,12 @@ VOID
     }
 }
 
+VOID
+	SysThreadInit(PSYSTHREAD ThreadCtx)
+{
+	RtlZeroMemory(ThreadCtx, sizeof(SYSTHREAD));
+	KeInitializeEvent(&ThreadCtx->Event, SynchronizationEvent, FALSE);
+}
 
 NTSTATUS
 	SysThreadStart(PSYSTHREAD ThreadCtx, PSYSTHREAD_ROUTINE  Routine, PVOID Context)
@@ -64,7 +70,6 @@ NTSTATUS
 
 	ThreadCtx->Routine = Routine;
 	ThreadCtx->Context = Context;
-	KeInitializeEvent(&ThreadCtx->Event, SynchronizationEvent, FALSE);
 
     Status = PsCreateSystemThread(	&ThreadCtx->ThreadHandle,
                                     THREAD_ALL_ACCESS,

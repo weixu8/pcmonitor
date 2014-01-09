@@ -1,6 +1,6 @@
 #include <inc/keybrd.h>
 #include <inc/klogger.h>
-#include <inc/ecore.h>
+#include <inc/monitor.h>
 #include <inc/ntapiex.h>
 #include <injectstub/h/stub.h>
 #include <ntimage.h>

