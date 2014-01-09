@@ -5,6 +5,6 @@
 #include <inc/drvmain.h>
 
 NTSTATUS
-	InjectFindAllProcessesAndInjectDll(PUNICODE_STRING ProcessPrefix, PUNICODE_STRING DllPath);
+InjectFindAllProcessesAndInjectDll(PUNICODE_STRING ProcessPrefix, PUNICODE_STRING DllPath, PUNICODE_STRING DllName);
 
 #endif

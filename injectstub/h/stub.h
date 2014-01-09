@@ -20,14 +20,13 @@ STUB_DATA			ends
 #pragma pack(push, 1)
 
 typedef struct _STUB_DATA {
-	ULONG_PTR   Inited;
-	WCHAR		LibName[0x100];
-	WCHAR		Kernel32Name[0x20];
-	CHAR		VirtualProtectName[0x20];
-	BOOLEAN		bLoadLibraryEx;
-	PVOID		pLoadLibraryW;
-	PVOID		pGetProcAddress;
-	PVOID		VirtualProtect;
+	ULONG_PTR		Inited;
+	PVOID			LdrLoadDll;
+	UNICODE_STRING	usDllName;
+	WCHAR			DllName[0x100];
+	WCHAR			DllPath[0x100];
+	PVOID			hModule;
+	ULONG_PTR		Loaded;
 } STUB_DATA, *PSTUB_DATA;
 
 #pragma pack(pop)

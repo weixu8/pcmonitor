@@ -150,6 +150,19 @@ __in KPRIORITY Increment
 
 NTSYSAPI
 PVOID
-PsGetThreadWin32Thread(PETHREAD);
+PsGetThreadWin32Thread(PETHREAD Thread);
+
+NTSYSAPI
+PVOID
+PsGetProcessSectionBaseAddress(PEPROCESS Process);
+
+NTSYSAPI
+PCHAR
+PsGetProcessImageFileName(PEPROCESS Process);
+
+NTSYSAPI
+PIMAGE_NT_HEADERS
+RtlImageNtHeader(PVOID ImageBase);
+
 
 #endif
