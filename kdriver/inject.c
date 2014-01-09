@@ -553,8 +553,6 @@ VOID
 	RtlZeroMemory(Src, sizeof(UNICODE_STRING));
 }
 
-
-
 NTSTATUS
 	InjectQueryAllProcessInfo(
 		OUT PSYSTEM_PROCESS_INFORMATION *pInfo,

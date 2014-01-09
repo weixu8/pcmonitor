@@ -1,27 +1,31 @@
 // dllmain.cpp : Defines the entry point for the DLL application.
 #include "project.h"
+#include "monitor.h"
 
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved
 					 )
 {
+	BOOL Result = FALSE;
+
 	switch (ul_reason_for_call)
 	{
 	case DLL_PROCESS_ATTACH:
-		OutputDebugStringA("DLL_PROCESS_ATTACH\n");
+		Result = MonitorStart();
 		break;
 	case DLL_THREAD_ATTACH:
-		OutputDebugStringA("DLL_THREAD_ATTACH\n");
+		Result = TRUE;
 		break;
 	case DLL_THREAD_DETACH:
-		OutputDebugStringA("DLL_THREAD_DETACH\n");
+		Result = TRUE;
 		break;
 	case DLL_PROCESS_DETACH:
-		OutputDebugStringA("DLL_PROCESS_DETACH\n");
+		MonitorStop();
+		Result = TRUE;
 		break;
 	}
 
-	return TRUE;
+	return Result;
 }
 

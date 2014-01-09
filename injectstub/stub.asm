@@ -17,7 +17,7 @@ IFDEF RAX
 	stubData STUB_DATA <>
 	stubProcedure PROC
 		push rbx
-		push rax
+		sub rsp, 28h
 		mov rbx, 1
 		mov rax, 0
 		lock cmpxchg [stubData.Inited], rbx
@@ -33,7 +33,7 @@ IFDEF RAX
 		mov rax, 1
 		mov [stubData.Loaded], rax
 cleanup:
-		pop rax
+		add rsp, 28h
 		pop rbx
 		ret
 	stubProcedure ENDP
