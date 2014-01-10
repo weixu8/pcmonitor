@@ -56,7 +56,10 @@ HWINSTA	DeviceOpenWinsta(HANDLE hDevice, WCHAR *lpszWindowStation)
 	DWORD ResultBytes;
 	DWORD Error;
 
-	_snwprintf_s((WCHAR *)&Request.WinstaName, sizeof(Request.WinstaName), _TRUNCATE, L"%ws", lpszWindowStation);
+	memset(&Request, 0, sizeof(Request));
+	memset(&Result, 0, sizeof(Result));
+
+	_snwprintf_s((WCHAR *)Request.WinstaName, RTL_NUMBER_OF(Request.WinstaName), _TRUNCATE, L"%ws", lpszWindowStation);
 
 	Error = ControlDevice(hDevice, IOCTL_KMON_OPEN_WINSTA, &Request, sizeof(Request), &Result, sizeof(Result), &ResultBytes);
 	if (Error != ERROR_SUCCESS) {
@@ -83,7 +86,10 @@ HDESK	DeviceOpenDesktop(HANDLE hDevice, HWINSTA hWinsta, WCHAR *lpszDesktopName)
 	DWORD ResultBytes;
 	DWORD Error;
 
-	_snwprintf_s((WCHAR *)&Request.DesktopName, sizeof(Request.DesktopName), _TRUNCATE, L"%ws", lpszDesktopName);
+	memset(&Request, 0, sizeof(Request));
+	memset(&Result, 0, sizeof(Result));
+	
+	_snwprintf_s((WCHAR *)Request.DesktopName, RTL_NUMBER_OF(Request.DesktopName), _TRUNCATE, L"%ws", lpszDesktopName);
 	Request.hWinsta = hWinsta;
 
 	Error = ControlDevice(hDevice, IOCTL_KMON_OPEN_DESKTOP, &Request, sizeof(Request), &Result, sizeof(Result), &ResultBytes);

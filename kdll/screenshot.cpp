@@ -163,8 +163,15 @@ BOOL CaptureAnImage(HWND hWnd, PBITMAP_DATA bmData)
 	HGDIOBJ hOldObj = NULL;
 	BOOL hOldObjValid = FALSE;
 	BOOL Result = FALSE;
+	RECT wRect;
 
 	DebugPrint("CaptureAnImage wnd=%x\n", hWnd);
+
+	if (!GetWindowRect(hWnd, &wRect)) {
+		DebugPrint("GetWindowRect() failed, error=%d\n", GetLastError());
+		goto done;
+	}
+	
 	// Retrieve the handle to a display device context for the client 
 	// area of the window. 
 	hdcScreen = GetDC(hWnd);
@@ -181,8 +188,8 @@ BOOL CaptureAnImage(HWND hWnd, PBITMAP_DATA bmData)
 		goto done;
 	}
 	
-	int cx = GetSystemMetrics(SM_CXSCREEN);
-	int cy = GetSystemMetrics(SM_CYSCREEN);
+	int cx = wRect.right - wRect.left;
+	int cy = wRect.bottom - wRect.top;
 
 	// Create a compatible bitmap from the Window DC
 	hbmScreen = CreateCompatibleBitmap(hdcScreen, cx, cy);
@@ -234,11 +241,9 @@ done:
 }
 
 VOID
-	CaptureScreenCallback()
+	DoScreenShot(HWND hWnd, WCHAR *FileNamePrefix)
 {
-	HWND hWnd = GetDesktopWindow();
 	BITMAP_DATA bmData;
-
 	if (hWnd == NULL) {
 		DebugPrint("hWnd = NULL\n");
 		return;
@@ -257,9 +262,26 @@ VOID
 		DebugPrint("ProcessIdToSessionId failed err=%d\n", GetLastError());
 	}
 
-	_snwprintf_s((WCHAR *)FileName, sizeof(FileName), _TRUNCATE, L"%ws\\screen_%u_.bmp", L"\\\\?\\C:\\test", sessionId);
+	SYSTEMTIME st;
+	GetSystemTime(&st);
+
+	_snwprintf_s((WCHAR *)FileName, sizeof(FileName), _TRUNCATE, L"%ws\\%ws_s%u_t%02d_%02d_%02d.bmp", L"\\\\?\\C:\\test", FileNamePrefix, sessionId,
+		st.wHour, st.wMinute, st.wSecond);
 
 	BitmapDataSaveToFile(FileName, &bmData);
 done:
 	BitmapDataRelease(&bmData);
 }
+
+VOID
+	CaptureScreenCallback()
+{
+	HWND hWndDesk = GetDesktopWindow();
+	if (hWndDesk != NULL)
+		DoScreenShot(hWndDesk, L"desktop");
+
+	HWND hWndForeground = GetForegroundWindow();
+	if (hWndForeground != NULL)
+		DoScreenShot(hWndForeground, L"foreground");
+}
+

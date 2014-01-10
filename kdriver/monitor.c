@@ -212,7 +212,7 @@ NTSTATUS MonitorOpenWinstaWorker(POPEN_WINSTA OpenWinsta)
 	BOOLEAN bProcAcquired = FALSE;
 	KAPC_STATE ApcState;
 
-	Status = RtlStringCchPrintfW(FullObjName, sizeof(FullObjName), L"\\sessions\\%d\\windows\\windowstations\\%ws", PsGetProcessSessionId(OpenWinsta->Process), OpenWinsta->WinstaName);
+	Status = RtlStringCchPrintfW(FullObjName, RTL_NUMBER_OF(FullObjName), L"\\sessions\\%d\\windows\\windowstations\\%ws", PsGetProcessSessionId(OpenWinsta->Process), OpenWinsta->WinstaName);
 	if (!NT_SUCCESS(Status)) {
 		KLog(LError, "RtlStringCchPrintfW failed err=%x", Status);
 		goto cleanup;
