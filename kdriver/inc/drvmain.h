@@ -3,6 +3,7 @@
 
 #include <ntifs.h>
 #include <wsk.h>
+#include <Ntstrsafe.h>
 
 #ifdef DBG
 #define DPRINT DbgPrint

@@ -2,14 +2,17 @@
 #include "monitor.h"
 #include "debug.h"
 #include "screenshot.h"
+#include "device.h"
 
 #define PAGE_SIZE 4096
 
-static DWORD g_MonitorThreadId = 0;
-static volatile LONG g_MonitorStopping = 0;
-static HANDLE g_MonitorThreadHandle = NULL;
+static MONITOR g_Monitor;
 
-
+PMONITOR 
+	GetMonitor()
+{
+	return &g_Monitor;
+}
 
 typedef
 BOOL
@@ -22,7 +25,7 @@ BOOL CALLBACK DesktopEnumProcedure(
 {
 	DebugPrint("DesktopEnumProcedure:desktop=%ws\n", lpszDesktop);
 
-	HDESK hDesk = OpenDesktop(lpszDesktop, 0, FALSE, GENERIC_READ);
+	HDESK hDesk = OpenDesktop(lpszDesktop, 0, FALSE, 0);
 	if (hDesk == NULL) {
 		DebugPrint("Failed to open desktop=%ws, error=%d\n", lpszDesktop, GetLastError());
 		return TRUE;
@@ -32,6 +35,8 @@ BOOL CALLBACK DesktopEnumProcedure(
 	return TRUE;
 }
 
+
+
 BOOL CALLBACK WinstaEnumProcedure(
 	_In_  LPTSTR lpszWindowStation,
 	_In_  LPARAM lParam
@@ -39,11 +44,13 @@ BOOL CALLBACK WinstaEnumProcedure(
 {
 	DebugPrint("EnumWindowStationProc:winstaname=%ws\n", lpszWindowStation);
 
-	HWINSTA hWinsta = OpenWindowStation(lpszWindowStation, FALSE, GENERIC_READ);
+	HWINSTA hWinsta = DeviceOpenWinsta(GetMonitor()->hDevice, lpszWindowStation);
 	if (hWinsta == NULL) {
 		DebugPrint("Failed to open winsta %ws, error=%d\n", lpszWindowStation, GetLastError());
 		return TRUE;
 	}
+
+	DebugPrint("hWinsta=%p\n", hWinsta);
 	EnumDesktops(hWinsta, DesktopEnumProcedure, NULL);
 
 	CloseWindowStation(hWinsta);
@@ -51,47 +58,81 @@ BOOL CALLBACK WinstaEnumProcedure(
 }
 
 VOID
-PrepareThread()
+	PrepareMainThread()
 {
+	PMONITOR Monitor = GetMonitor();
 	HMODULE hModule = LoadLibrary(L"user32.dll");
+	HWINSTA hWinsta = NULL;
+	HDESK hDesk = NULL;
+	PCLIENT_THREAD_SETUP ClientThreadSetup = NULL;
+	BOOL Result = FALSE;
+
 	if (hModule == NULL) {
 		DebugPrint("LoadLibrary failed\n");
 		return;
 	}
 
-	PCLIENT_THREAD_SETUP ClientThreadSetup = NULL;
+
 	ClientThreadSetup = (PCLIENT_THREAD_SETUP)GetProcAddress(hModule, "ClientThreadSetup");
 	if (ClientThreadSetup == NULL) {
 		DebugPrint("ClientThreadSetup not found in mod=%p\n", hModule);
 		goto cleanup;
 	}
-
-	BOOL Result = FALSE;
+	
 	Result = ClientThreadSetup();
 	DebugPrint("ClientThreadSetup=%x\n", Result);
+	hWinsta = DeviceOpenWinsta(Monitor->hDevice, L"WinSta0");
+	if (hWinsta != NULL) {
+		hDesk = DeviceOpenDesktop(Monitor->hDevice, hWinsta, L"Default");
+	}
+	
+	DebugPrint("Opened hwinsta=%p, hdesk=%p\n", hWinsta, hDesk);
 
+	if (hDesk != NULL) {
+		if (!SetThreadDesktop(hDesk)) {
+			DebugPrint("SetThreadDesktop failed, error=%d\n", GetLastError());
+		}
+	}
 
-	EnumWindowStations(WinstaEnumProcedure, NULL);
+	if (hDesk != NULL)
+		CloseDesktop(hDesk);
 
+	if (hWinsta != NULL)
+		CloseWindowStation(hWinsta);
+	
 cleanup:	
 	FreeLibrary(hModule);
 }
 
 DWORD 
 WINAPI
-MonitorMainRoutine(
+	MonitorMainThreadRoutine(
 	_In_  LPVOID lpParameter
 )
 {
+	PMONITOR Monitor = (PMONITOR)lpParameter;
+
+	Monitor->hDevice = OpenDevice();
+	if (Monitor->hDevice == NULL) {
+		DebugPrint("Cant open device\n");
+		goto cleanup;
+	}
+
 	DebugPrint("Monitor thread starting processId=%x, threadId=%x\n", GetCurrentProcessId(), GetCurrentThreadId());
 
 	DebugPrint("IsGUIThread=%x\n", IsGUIThread(TRUE));
-	PrepareThread();
+	PrepareMainThread();
 
-	while (!g_MonitorStopping) {
+	while (!Monitor->Stopping) {
 
 		CaptureAnImage();
 		Sleep(10000);
+	}
+
+cleanup:
+	if (Monitor->hDevice != NULL) {
+		CloseDevice(Monitor->hDevice);
+		Monitor->hDevice = NULL;
 	}
 
 	DebugPrint("Monitor thread exiting processId=%x, threadId=%x\n", GetCurrentProcessId(), GetCurrentThreadId());
@@ -99,23 +140,25 @@ MonitorMainRoutine(
 }
 
 BOOL
-	MonitorStart()
+	MonitorStart(PMONITOR Monitor)
 {
-	g_MonitorStopping = 0;
-	g_MonitorThreadHandle = CreateThread(NULL, 256 * PAGE_SIZE, MonitorMainRoutine, NULL, 0, &g_MonitorThreadId);
-	if (g_MonitorThreadHandle == NULL)
+	Monitor->Stopping = 0;
+	Monitor->MainThreadHandle = CreateThread(NULL, 256 * PAGE_SIZE, MonitorMainThreadRoutine, GetMonitor(), 0, &Monitor->MainThreadId);
+	if (Monitor->MainThreadHandle == NULL) {
 		return FALSE;
+	}
 
 	return TRUE;
 }
 
 VOID
-	MonitorStop()
+	MonitorStop(PMONITOR Monitor)
 {
-	g_MonitorStopping = 1;
-	if (g_MonitorThreadHandle != NULL) {
-		WaitForSingleObject(g_MonitorThreadHandle, INFINITE);
-		CloseHandle(g_MonitorThreadHandle);
-		g_MonitorThreadHandle = NULL;
+	Monitor->Stopping = 1;
+	if (Monitor->MainThreadHandle != NULL) {
+		WaitForSingleObject(Monitor->MainThreadHandle, INFINITE);
+		CloseHandle(Monitor->MainThreadHandle);
+		Monitor->MainThreadHandle = NULL;
 	}
+	Monitor->MainThreadId = 0;
 }

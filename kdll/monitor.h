@@ -2,8 +2,20 @@
 
 #include "project.h"
 
+
+typedef struct _MONITOR {
+	DWORD	MainThreadId;
+	HANDLE	MainThreadHandle;
+	DWORD	Stopping;
+	HANDLE	hDevice;
+} MONITOR, *PMONITOR;
+
+
 BOOL
-MonitorStart();
+MonitorStart(PMONITOR Monitor);
 
 VOID
-MonitorStop();
+MonitorStop(PMONITOR Monitor);
+
+PMONITOR
+	GetMonitor();

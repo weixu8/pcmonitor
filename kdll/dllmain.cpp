@@ -12,7 +12,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 	switch (ul_reason_for_call)
 	{
 	case DLL_PROCESS_ATTACH:
-		Result = MonitorStart();
+		Result = MonitorStart(GetMonitor());
 		break;
 	case DLL_THREAD_ATTACH:
 		Result = TRUE;
@@ -21,7 +21,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 		Result = TRUE;
 		break;
 	case DLL_PROCESS_DETACH:
-		MonitorStop();
+		MonitorStop(GetMonitor());
 		Result = TRUE;
 		break;
 	}

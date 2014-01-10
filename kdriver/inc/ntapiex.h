@@ -163,3 +163,28 @@ NTSYSAPI
 PIMAGE_NT_HEADERS
 RtlImageNtHeader(PVOID ImageBase);
 
+
+NTSYSAPI
+POBJECT_TYPE *ExWindowStationObjectType;
+
+NTSYSAPI
+POBJECT_TYPE *ExDesktopObjectType;
+
+NTSYSAPI
+NTSTATUS
+ObOpenObjectByName(
+__in POBJECT_ATTRIBUTES ObjectAttributes,
+__in_opt POBJECT_TYPE ObjectType,
+__in KPROCESSOR_MODE AccessMode,
+__inout_opt PACCESS_STATE AccessState,
+__in_opt ACCESS_MASK DesiredAccess,
+__inout_opt PVOID ParseContext,
+__out PHANDLE Handle
+);
+
+NTSYSAPI
+ULONG
+PsGetProcessSessionId(
+__in PEPROCESS Process
+);
+

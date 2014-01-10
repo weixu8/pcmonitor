@@ -12,15 +12,21 @@ BOOL CaptureAnImage()
 	HWND hWnd = NULL;
 	BOOL hOldObjValid = FALSE;
 	HDESK hDesk = NULL;
+	BITMAPFILEHEADER   bmfHeader;
+	BITMAPINFOHEADER   bi;
+	HANDLE hDIB = NULL;
+	HANDLE hFile = INVALID_HANDLE_VALUE;
 
 	hWnd = GetDesktopWindow();
 	if (hWnd == NULL) {
 		DebugPrint("GetDesktopWindow failed\n");
 		goto done;
 	}
+
+	DebugPrint("Opened desktop wnd=%x\n", hWnd);
 	// Retrieve the handle to a display device context for the client 
 	// area of the window. 
-	hdcScreen = GetDC(GetDesktopWindow());
+	hdcScreen = GetDC(hWnd);
 	if (hdcScreen == NULL) {
 		DebugPrint("GetDC() failed\n");
 		goto done;
@@ -65,9 +71,6 @@ BOOL CaptureAnImage()
 	// Get the BITMAP from the HBITMAP
 	GetObject(hbmScreen, sizeof(BITMAP), &bmpScreen);
 
-	BITMAPFILEHEADER   bmfHeader;
-	BITMAPINFOHEADER   bi;
-
 	bi.biSize = sizeof(BITMAPINFOHEADER);
 	bi.biWidth = bmpScreen.bmWidth;
 	bi.biHeight = bmpScreen.bmHeight;
@@ -85,7 +88,7 @@ BOOL CaptureAnImage()
 	// Starting with 32-bit Windows, GlobalAlloc and LocalAlloc are implemented as wrapper functions that 
 	// call HeapAlloc using a handle to the process's default heap. Therefore, GlobalAlloc and LocalAlloc 
 	// have greater overhead than HeapAlloc.
-	HANDLE hDIB = GlobalAlloc(GHND, dwBmpSize);
+	hDIB = GlobalAlloc(GHND, dwBmpSize);
 	char *lpbitmap = (char *)GlobalLock(hDIB);
 
 	// Gets the "bits" from the bitmap and copies them into a buffer 
@@ -96,7 +99,7 @@ BOOL CaptureAnImage()
 		(BITMAPINFO *)&bi, DIB_RGB_COLORS);
 
 	// A file is created, this is where we will save the screen capture.
-	HANDLE hFile = CreateFile(L"\\\\?\\C:\\test\\screen.bmp",
+	hFile = CreateFile(L"\\\\?\\C:\\test\\screen.bmp",
 		GENERIC_WRITE,
 		0,
 		NULL,

