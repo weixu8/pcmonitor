@@ -86,7 +86,7 @@ WINAPI
 
 	while (!Monitor->Stopping) {
 		CaptureScreenCallback();
-		Sleep(10000);
+		Sleep(30000);
 	}
 
 cleanup:

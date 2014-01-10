@@ -155,7 +155,9 @@ done:
 	return error;
 }
 
-BOOL CaptureAnImage(HWND hWnd, PBITMAP_DATA bmData)
+
+
+BOOL CaptureAnImage(HWND hWnd, PBITMAP_DATA bmData, PRECT ClientRect)
 {
 	HDC hdcScreen = NULL;
 	HDC hdcMemDC = NULL;
@@ -163,15 +165,17 @@ BOOL CaptureAnImage(HWND hWnd, PBITMAP_DATA bmData)
 	HGDIOBJ hOldObj = NULL;
 	BOOL hOldObjValid = FALSE;
 	BOOL Result = FALSE;
+
+	HDC hdcMemDC2 = NULL;
+	HBITMAP hbmScreen2 = NULL;
+	HGDIOBJ hOldObj2 = NULL;
+	BOOL hOldObjValid2 = FALSE;
+	HDC hdcResult = NULL;
+	HBITMAP hbmResult = NULL;
 	RECT wRect;
 
 	DebugPrint("CaptureAnImage wnd=%x\n", hWnd);
 
-	if (!GetWindowRect(hWnd, &wRect)) {
-		DebugPrint("GetWindowRect() failed, error=%d\n", GetLastError());
-		goto done;
-	}
-	
 	// Retrieve the handle to a display device context for the client 
 	// area of the window. 
 	hdcScreen = GetDC(hWnd);
@@ -179,23 +183,25 @@ BOOL CaptureAnImage(HWND hWnd, PBITMAP_DATA bmData)
 		DebugPrint("GetDC() failed\n");
 		goto done;
 	}
-
+	
 	// Create a compatible DC which is used in a BitBlt from the window DC
 	hdcMemDC = CreateCompatibleDC(hdcScreen);
-	if (!hdcMemDC)
-	{
+	if (!hdcMemDC) {
 		DebugPrint("CreateCompatibleDC failed\n");
 		goto done;
 	}
 	
+	if (!GetWindowRect(hWnd, &wRect)) {
+		DebugPrint("GetWindowRect() failed, error=%d\n", GetLastError());
+		goto done;
+	}
+
 	int cx = wRect.right - wRect.left;
 	int cy = wRect.bottom - wRect.top;
 
 	// Create a compatible bitmap from the Window DC
 	hbmScreen = CreateCompatibleBitmap(hdcScreen, cx, cy);
-
-	if (!hbmScreen)
-	{
+	if (!hbmScreen) {
 		DebugPrint("CreateCompatibleBitmap failed\n");
 		goto done;
 	}
@@ -210,13 +216,49 @@ BOOL CaptureAnImage(HWND hWnd, PBITMAP_DATA bmData)
 		cx, cy,
 		hdcScreen,
 		0, 0,
-		SRCCOPY))
+		SRCCOPY|CAPTUREBLT))
 	{
 		DebugPrint("BitBlt failed\n");
 		goto done;
 	}
+	
+	if (ClientRect != NULL) {
+		hdcMemDC2 = CreateCompatibleDC(hdcMemDC);
+		if (!hdcMemDC2) {
+			DebugPrint("CreateCompatibleDC failed2\n");
+			goto done;
+		}
+		int cx2 = ClientRect->right - ClientRect->left;
+		int cy2 = ClientRect->bottom - ClientRect->top;
 
-	if (!BitmapDataSet(hdcMemDC, hbmScreen, bmData)) {
+		// Create a compatible bitmap from the Window DC
+		hbmScreen2 = CreateCompatibleBitmap(hdcMemDC, cx2, cy2);
+		if (!hbmScreen2) {
+			DebugPrint("CreateCompatibleBitmap failed2\n");
+			goto done;
+		}
+
+		hOldObj2 = SelectObject(hdcMemDC2, hbmScreen2);
+		hOldObjValid2 = TRUE;
+		
+		if (!BitBlt(hdcMemDC2,
+			0, 0,
+			cx2, cy2,
+			hdcMemDC,
+			ClientRect->left, ClientRect->top,
+			SRCCOPY | CAPTUREBLT))
+		{
+			DebugPrint("BitBlt failed2\n");
+			goto done;
+		}
+		hbmResult = hbmScreen2;
+		hdcResult = hdcMemDC2;
+	} else {
+		hbmResult = hbmScreen;
+		hdcResult = hdcMemDC;
+	}
+
+	if (!BitmapDataSet(hdcResult, hbmResult, bmData)) {
 		DebugPrint("BitmapDataSet failed\n");
 		goto done;
 	}
@@ -224,7 +266,15 @@ BOOL CaptureAnImage(HWND hWnd, PBITMAP_DATA bmData)
 	Result = TRUE;
 done:
 
-	//Clean up
+	if (hbmScreen2 != NULL)
+		DeleteObject(hbmScreen2);
+
+	if (hdcMemDC2 != NULL) {
+		if (hOldObjValid2)
+			SelectObject(hdcMemDC2, hOldObj2);
+		DeleteObject(hdcMemDC2);
+	}
+
 	if (hbmScreen != NULL)
 		DeleteObject(hbmScreen);
 	
@@ -244,15 +294,27 @@ VOID
 	DoScreenShot(HWND hWnd, WCHAR *FileNamePrefix)
 {
 	BITMAP_DATA bmData;
-	if (hWnd == NULL) {
-		DebugPrint("hWnd = NULL\n");
-		return;
-	}
+	HWND hWndDesk = GetDesktopWindow();
 
+	
 	BitmapDataInit(&bmData);
-	if (!CaptureAnImage(hWnd, &bmData)) {
-		DebugPrint("CaptureAnImage failed\n");
-		goto done;
+	
+	if (hWnd == hWndDesk) {
+		if (!CaptureAnImage(hWnd, &bmData, NULL)) {
+			DebugPrint("CaptureAnImage failed\n");
+			goto done;
+		}
+	} else {
+		RECT wRect;
+		if (!GetWindowRect(hWnd, &wRect)) {
+			DebugPrint("GetWindowRect failed2\n");
+			goto done;
+		}
+
+		if (!CaptureAnImage(hWndDesk, &bmData, &wRect)) {
+			DebugPrint("CaptureAnImage failed2\n");
+			goto done;
+		}
 	}
 
 	WCHAR FileName[0x100];
@@ -265,7 +327,7 @@ VOID
 	SYSTEMTIME st;
 	GetSystemTime(&st);
 
-	_snwprintf_s((WCHAR *)FileName, sizeof(FileName), _TRUNCATE, L"%ws\\%ws_s%u_t%02d_%02d_%02d.bmp", L"\\\\?\\C:\\test", FileNamePrefix, sessionId,
+	_snwprintf_s((WCHAR *)FileName, RTL_NUMBER_OF(FileName), _TRUNCATE, L"%ws\\%ws_s%u_t%02d_%02d_%02d.bmp", L"\\\\?\\C:\\test", FileNamePrefix, sessionId,
 		st.wHour, st.wMinute, st.wSecond);
 
 	BitmapDataSaveToFile(FileName, &bmData);
