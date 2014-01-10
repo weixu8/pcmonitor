@@ -18,45 +18,6 @@ typedef
 BOOL
 (WINAPI *PCLIENT_THREAD_SETUP)(VOID);
 
-BOOL CALLBACK DesktopEnumProcedure(
-	_In_  LPTSTR lpszDesktop,
-	_In_  LPARAM lParam
-	)
-{
-	DebugPrint("DesktopEnumProcedure:desktop=%ws\n", lpszDesktop);
-
-	HDESK hDesk = OpenDesktop(lpszDesktop, 0, FALSE, 0);
-	if (hDesk == NULL) {
-		DebugPrint("Failed to open desktop=%ws, error=%d\n", lpszDesktop, GetLastError());
-		return TRUE;
-	}
-
-	CloseDesktop(hDesk);
-	return TRUE;
-}
-
-
-
-BOOL CALLBACK WinstaEnumProcedure(
-	_In_  LPTSTR lpszWindowStation,
-	_In_  LPARAM lParam
-	)
-{
-	DebugPrint("EnumWindowStationProc:winstaname=%ws\n", lpszWindowStation);
-
-	HWINSTA hWinsta = DeviceOpenWinsta(GetMonitor()->hDevice, lpszWindowStation);
-	if (hWinsta == NULL) {
-		DebugPrint("Failed to open winsta %ws, error=%d\n", lpszWindowStation, GetLastError());
-		return TRUE;
-	}
-
-	DebugPrint("hWinsta=%p\n", hWinsta);
-	EnumDesktops(hWinsta, DesktopEnumProcedure, NULL);
-
-	CloseWindowStation(hWinsta);
-	return TRUE;
-}
-
 VOID
 	PrepareMainThread()
 {
@@ -124,8 +85,7 @@ WINAPI
 	PrepareMainThread();
 
 	while (!Monitor->Stopping) {
-
-		CaptureAnImage();
+		CaptureScreenCallback();
 		Sleep(10000);
 	}
 
