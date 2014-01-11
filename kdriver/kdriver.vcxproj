@@ -385,6 +385,7 @@
     <ClCompile Include="klogger.c" />
     <ClCompile Include="mwsk.c" />
     <ClCompile Include="pe.c" />
+    <ClCompile Include="processtable.c" />
     <ClCompile Include="string.c" />
     <ClCompile Include="systhread.c" />
     <ClCompile Include="sysworker.c" />
@@ -401,6 +402,7 @@
     <ClInclude Include="inc\ntapiex.h" />
     <ClInclude Include="inc\pallocator.h" />
     <ClInclude Include="inc\pe.h" />
+    <ClInclude Include="inc\processtable.h" />
     <ClInclude Include="inc\shrlock.h" />
     <ClInclude Include="inc\string.h" />
     <ClInclude Include="inc\systhread.h" />

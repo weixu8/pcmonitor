@@ -7,6 +7,8 @@
 #include <inc/keybrd.h>
 #include <inc/inject.h>
 #include <inc/thash.h>
+#include <inc/pallocator.h>
+
 #include <h/drvioctl.h>
 
 #define MONITOR_STATE_STOPPED 1
@@ -19,7 +21,7 @@ typedef struct _MONITOR {
 	PMWSK_CONTEXT   WskContext;
 	volatile LONG	State;
 	KGUARDED_MUTEX	Mutex;
-	THASH			InjectedProcTable;
+	THASH			ProcessTable;
 } MONITOR, *PMONITOR;
 
 VOID

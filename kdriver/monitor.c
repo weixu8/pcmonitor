@@ -2,6 +2,7 @@
 #include <inc/monitor.h>
 #include <h/drvioctl.h>
 #include <inc/ntapiex.h>
+#include <inc/processtable.h>
 
 #define __SUBCOMPONENT__ "ecore"
 
@@ -107,6 +108,8 @@ NTSTATUS
 		return STATUS_TOO_LATE;
 	}
 
+	ProcessTableInit(&Monitor->ProcessTable);
+
 	Monitor->WskContext = MWskCreate();
     if (Monitor->WskContext == NULL) {
         KLog(LError, "MWskCreate failed");
@@ -173,6 +176,7 @@ NTSTATUS
 		MWskRelease(Monitor->WskContext);
 		Monitor->WskContext = NULL;
 	}
+	ProcessTableRelease(&Monitor->ProcessTable);
 
 	Monitor->State = MONITOR_STATE_STOPPED;
 	KeReleaseGuardedMutex(&Monitor->Mutex);

@@ -21,13 +21,13 @@ typedef struct _THASH_NODE  THASH_NODE,  *PTHASH_NODE;
 // The data is always allocated by the clients.
 // In case it has fixed size it always recommeded to use pool allocator
 // since it is already used for nodes (see pallocator.h).
-typedef struct _THASH_ENTRY {
+struct _THASH_ENTRY {
 	PTHASH_ENTRY	Next;
 	PTHASH_ENTRY	Prev;
 };
 
 // The tree node
-typedef struct _THASH_NODE {
+struct _THASH_NODE {
 	union {
 		PTHASH_NODE		Child[2];	// Child node pointer
 		PTHASH_ENTRY	Leaf[2];	// Leaf (linked entries list) pointer
@@ -410,7 +410,7 @@ VOID thashBalanceAdded(
 		!node->Locked 
 	) {
 		// Split leaf list 
-		PTHASH_NODE n = PoolAllocateChunk(&Table->NodeAllocator);
+		PTHASH_NODE n = (PTHASH_NODE)PoolAllocateChunk(&Table->NodeAllocator);
 		if (n) {
 			PTHASH_ENTRY e, e_;
 #ifdef __THASH_DEBUG_	
@@ -1163,7 +1163,7 @@ typedef struct _THashMoveToSList_Context {
 static
 UCHAR NTAPI THashMoveToSList_Callback(PTHASH_ENTRY Entry, PVOID Context)
 {
-	PTHashMoveToSList_Context ctx = Context;
+	PTHashMoveToSList_Context ctx = (PTHashMoveToSList_Context)Context;
 	if (!ctx->Callback || ctx->Callback(Entry, ctx->Context)) {
 		Entry->Next = *ctx->ListHead;
 		*ctx->ListHead = Entry;
@@ -1199,7 +1199,7 @@ typedef struct _THashMoveToSListByPtr_Context {
 static
 UCHAR NTAPI THashMoveToSListByPtr_Callback(PTHASH_ENTRY Entry, PVOID Context)
 {
-	PTHashMoveToSListByPtr_Context ctx = Context;
+	PTHashMoveToSListByPtr_Context ctx = (PTHashMoveToSListByPtr_Context)Context;
 	if (*(PULONG_PTR)((char*)Entry + ctx->KeyOffset) == ctx->Key) {
 		Entry->Next = *ctx->ListHead;
 		*ctx->ListHead = Entry;

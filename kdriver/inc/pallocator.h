@@ -19,11 +19,11 @@
 typedef struct _POOL_ALLOCATOR_PAGE  POOL_ALLOCATOR_PAGE,  *PPOOL_ALLOCATOR_PAGE;
 typedef struct _POOL_ALLOCATOR_CHUNK POOL_ALLOCATOR_CHUNK, *PPOOL_ALLOCATOR_CHUNK;
 
-typedef struct _POOL_ALLOCATOR_CHUNK {
+struct _POOL_ALLOCATOR_CHUNK {
 	SLIST_ENTRY		Entry;
 };
 
-typedef struct _POOL_ALLOCATOR_PAGE {
+struct _POOL_ALLOCATOR_PAGE {
 	SLIST_ENTRY				Entry;
 	POOL_ALLOCATOR_CHUNK	Chunks[1];
 };
@@ -94,7 +94,7 @@ PVOID PoolAllocateChunk(PPOOL_ALLOCATOR Pool)
 	for (;;) {
 		if (!(chunk = InterlockedPopEntrySList(&Pool->FreeList))) {
 #pragma prefast(suppress:8139, "arguments exactly match required types")
-			PPOOL_ALLOCATOR_PAGE page = ExAllocatePoolWithTag(Pool->PoolType, POOL_ALLOCATOR_PAGE_SZ, Pool->Tag);
+			PPOOL_ALLOCATOR_PAGE page = (PPOOL_ALLOCATOR_PAGE)ExAllocatePoolWithTag(Pool->PoolType, POOL_ALLOCATOR_PAGE_SZ, Pool->Tag);
 			if (!page)
 				return 0;
 			else {
@@ -128,6 +128,6 @@ VOID PoolFreeChunk(PPOOL_ALLOCATOR Pool, PVOID Chunk)
 	LONG allocated = InterlockedDecrement(&Pool->Allocated);	
 	PALLOC_ASSERT(allocated >= 0);
 #endif
-	InterlockedPushEntrySList(&Pool->FreeList, Chunk);
+	InterlockedPushEntrySList(&Pool->FreeList, (PSLIST_ENTRY)Chunk);
 }
 
