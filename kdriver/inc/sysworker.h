@@ -31,6 +31,9 @@ VOID
 	SysWorkerAddWork(PSYSWORKER Worker, PSYS_WRK_ROUTINE Routine, PVOID Context);
 
 VOID
+	SysWrkItemDeref(PSYS_WRK_ITEM WrkItem);
+
+VOID
 	SysWorkerStop(PSYSWORKER Worker);
 
 PSYS_WRK_ITEM

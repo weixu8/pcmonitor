@@ -7,14 +7,17 @@
 #define MODULE_TAG 'prtb'
 
 ULONG
-	ProcEntryHash(PPROCESS_ENTRY Entry)
+	NTAPI
+	ProcessEntryHash(PPROCESS_ENTRY Entry)
 {
 	return THashPtrHash((ULONG_PTR)Entry->Process);
 }
 
 VOID
-	ProcEntryRelease(PPROCESS_ENTRY Entry)
+	ProcessEntryRelease(PPROCESS_ENTRY Entry)
 {
+	KLog(LInfo, "ProcEntry=%p , proc=%p released", Entry, Entry->Process);
+
 	if (Entry->Process != NULL)
 		ObDereferenceObject(Entry->Process);
 
@@ -22,59 +25,26 @@ VOID
 }
 
 VOID
-ProcEntryRef(PPROCESS_ENTRY Entry) {
+	ProcessEntryRef(PPROCESS_ENTRY Entry) 
+{
 	InterlockedIncrement(&Entry->RefCount);
 }
 
 VOID
-ProcEntryDeref(PPROCESS_ENTRY Entry) {
+	ProcessEntryDeref(PPROCESS_ENTRY Entry) 
+{
 	LONG RefCount = -1;
 	RefCount = InterlockedDecrement(&Entry->RefCount);
 	if (RefCount < 0)
 		__debugbreak();
 
 	if (0 == RefCount) {
-		ProcEntryRelease(Entry);
+		ProcessEntryRelease(Entry);
 	}
 }
 
-
-VOID
-	ProcessTableInit(THASH *ProcTable)
-{
-	THashInitialize(ProcTable, (PTHASH_HASH_FN)ProcEntryHash, NULL, NULL, NULL);
-}
-
-UCHAR NTAPI ProcEntryScanRemoveClb(PPROCESS_ENTRY Entry, PLIST_ENTRY ListHead)
-{
-	InsertHeadList(ListHead, &Entry->ListEntry);
-
-	return tHashRemove;
-}
-
-VOID
-	ProcessTableRelease(THASH *ProcTable)
-{
-	LIST_ENTRY EntryList;
-	PLIST_ENTRY ListEntry;
-	PPROCESS_ENTRY Entry;
-	
-	InitializeListHead(&EntryList);
-
-	THashScan(ProcTable, (PTHASH_SCAN_FN)ProcEntryScanRemoveClb, &EntryList, TRUE, TRUE);
-
-	while (!IsListEmpty(&EntryList)) {
-		ListEntry = RemoveHeadList(&EntryList);
-		Entry = CONTAINING_RECORD(ListEntry, PROCESS_ENTRY, ListEntry);
-		ProcEntryDeref(Entry);
-	}
-
-	THashRelease(ProcTable);
-}
-
-
-BOOLEAN
-	ProcEntryCreate(THASH *ProcTable, PEPROCESS Process)
+PPROCESS_ENTRY
+	ProcessEntryCreate(PPROCESS_TABLE Table, PEPROCESS Process)
 {
 	PPROCESS_ENTRY Entry = NULL;
 	BOOLEAN Inserted = FALSE;
@@ -82,47 +52,187 @@ BOOLEAN
 	Entry = (PPROCESS_ENTRY)ExAllocatePoolWithTag(NonPagedPool, sizeof(PROCESS_ENTRY), MODULE_TAG);
 	if (Entry == NULL) {
 		KLog(LError, "Cant alllocate entry for proc=%p\n", Process);
-		return FALSE;
+		return NULL;
 	}
+	KLog(LInfo, "ProcEntry=%p created , proc=%p", Entry, Process);
 
 	RtlZeroMemory(Entry, sizeof(PROCESS_ENTRY));
 	ObReferenceObject(Process);
 	Entry->Process = Process;
-	Entry->RefCount = 1;
+	Entry->RefCount = 2;
 
-	THashInsertUniqueByPtrClb(ProcTable, (PTHASH_ENTRY)Entry, FIELD_OFFSET(PROCESS_ENTRY, Process), ProcEntryHash(Entry), FALSE, NULL, NULL, &Inserted);
+	THashInsertUniqueByPtrClb(&Table->HashTable, (PTHASH_ENTRY)Entry, FIELD_OFFSET(PROCESS_ENTRY, Process), ProcessEntryHash(Entry), FALSE, NULL, NULL, &Inserted);
 	if (!Inserted) {
-		ProcEntryDeref(Entry);
+		KLog(LInfo, "duplicate entry already exists for proc=%p\n", Process);
+		ProcessEntryDeref(Entry);
+		ProcessEntryDeref(Entry);
+		return NULL;
 	} 
 
-	return TRUE;
+	return Entry;
 }
 
-UCHAR ProcEntryLookupClb(PPROCESS_ENTRY Entry, PVOID Context)
+UCHAR NTAPI ProcessEntryLookupClb(PPROCESS_ENTRY Entry, PVOID Context)
 {
-	ProcEntryRef(Entry);
+	ProcessEntryRef(Entry);
 	return tHashBreak;
 }
 
 PPROCESS_ENTRY
-	ProcEntryLookup(THASH *ProcTable, PEPROCESS Process)
+	ProcessEntryLookup(PPROCESS_TABLE Table, PEPROCESS Process)
 {
-	PPROCESS_ENTRY ProcEntry = NULL;
-	ProcEntry = (PPROCESS_ENTRY)THashLookupByPtrClb(ProcTable, (ULONG_PTR)Process, FIELD_OFFSET(PROCESS_ENTRY, Process), THashPtrHash((ULONG_PTR)Process), FALSE, (PTHASH_SCAN_FN)ProcEntryLookupClb, NULL);
+	PPROCESS_ENTRY Entry = NULL;
+	Entry = (PPROCESS_ENTRY)THashLookupByPtrClb(&Table->HashTable, (ULONG_PTR)Process, FIELD_OFFSET(PROCESS_ENTRY, Process), THashPtrHash((ULONG_PTR)Process), FALSE, (PTHASH_SCAN_FN)ProcessEntryLookupClb, NULL);
 	
-	return ProcEntry;
+	return Entry;
 }
 
-UCHAR 
-	ProcEntryRemoveClb(PPROCESS_ENTRY Entry, PVOID Context) {
-	return tHashBreak;
+UCHAR NTAPI ProcessEntryRemoveClb(PPROCESS_ENTRY Entry, PVOID Context) 
+{
+	return tHashRemove;
 }
 
 PPROCESS_ENTRY
-	ProcEntryRemove(THASH *ProcTable, PEPROCESS Process)
+	ProcessEntryRemove(PPROCESS_TABLE Table, PEPROCESS Process)
 {
-	PPROCESS_ENTRY ProcEntry = NULL;
-	ProcEntry = (PPROCESS_ENTRY)THashLookupByPtrClb(ProcTable, (ULONG_PTR)Process, FIELD_OFFSET(PROCESS_ENTRY, Process), THashPtrHash((ULONG_PTR)Process), FALSE, (PTHASH_SCAN_FN)ProcEntryRemoveClb, NULL);
+	PPROCESS_ENTRY Entry = NULL;
+	Entry = (PPROCESS_ENTRY)THashLookupByPtrClb(&Table->HashTable, (ULONG_PTR)Process, FIELD_OFFSET(PROCESS_ENTRY, Process), THashPtrHash((ULONG_PTR)Process), FALSE, (PTHASH_SCAN_FN)ProcessEntryRemoveClb, NULL);
 
-	return ProcEntry;
+	return Entry;
+}
+
+UCHAR
+NTAPI
+	ProcessEntryScanClb(PPROCESS_ENTRY Entry, PLIST_ENTRY ListHead)
+{
+	ProcessEntryRef(Entry);
+	InsertHeadList(ListHead, &Entry->ListEntry);
+
+	return tHashContinue;
+}
+
+NTSTATUS
+	ProcessTableWaitWorker(PPROCESS_TABLE Table)
+{
+	LIST_ENTRY EntryList;
+	PLIST_ENTRY ListEntry = NULL;
+	PPROCESS_ENTRY Entry = NULL;
+
+	InitializeListHead(&EntryList);
+
+	THashScan(&Table->HashTable, (PTHASH_SCAN_FN)ProcessEntryScanClb, &EntryList, TRUE, FALSE);
+
+	while (!IsListEmpty(&EntryList)) {
+		ListEntry = RemoveHeadList(&EntryList);
+		Entry = CONTAINING_RECORD(ListEntry, PROCESS_ENTRY, ListEntry);
+		if (0 != KeReadStateEvent((PRKEVENT)Entry->Process)) {
+			Entry->Waited = 1;
+		}
+
+		if (Entry->Waited) {
+			PPROCESS_ENTRY RemovedEntry = NULL;
+			RemovedEntry = ProcessEntryRemove(Table, Entry->Process);
+			if (RemovedEntry != NULL)
+				ProcessEntryDeref(RemovedEntry);
+		}
+
+		ProcessEntryDeref(Entry);
+	}
+
+	return STATUS_SUCCESS;
+}
+
+
+UCHAR
+NTAPI
+	ProcessEntryScanRemoveClb(PPROCESS_ENTRY Entry, PLIST_ENTRY ListHead)
+{
+	InsertHeadList(ListHead, &Entry->ListEntry);
+
+	return tHashRemove;
+}
+
+NTSTATUS 
+	ProcessTableRemoveAllWorker(PPROCESS_TABLE Table)
+{
+	LIST_ENTRY EntryList;
+	PLIST_ENTRY ListEntry = NULL;
+	PPROCESS_ENTRY Entry = NULL;
+
+	InitializeListHead(&EntryList);
+
+	THashScan(&Table->HashTable, (PTHASH_SCAN_FN)ProcessEntryScanRemoveClb, &EntryList, TRUE, TRUE);
+	while (!IsListEmpty(&EntryList)) {
+		ListEntry = RemoveHeadList(&EntryList);
+		Entry = CONTAINING_RECORD(ListEntry, PROCESS_ENTRY, ListEntry);
+		ProcessEntryDeref(Entry);
+	}
+
+	return STATUS_SUCCESS;
+}
+
+VOID NTAPI
+	ProcTableTimerDpcRoutine(
+		_In_      struct _KDPC *Dpc,
+		_In_opt_  PVOID DeferredContext,
+		_In_opt_  PVOID SystemArgument1,
+		_In_opt_  PVOID SystemArgument2
+)
+{
+	PPROCESS_TABLE Table = (PPROCESS_TABLE)DeferredContext;
+
+	SysWorkerAddWork(&Table->Worker, ProcessTableWaitWorker, Table);
+}
+
+VOID
+	ProcessTableInit(PPROCESS_TABLE Table)
+{
+	RtlZeroMemory(Table, sizeof(PROCESS_TABLE));
+	KeInitializeTimer(&Table->Timer);
+	KeInitializeDpc(&Table->TimerDpc, ProcTableTimerDpcRoutine, Table);
+	SysWorkerInit(&Table->Worker);
+}
+
+NTSTATUS
+	ProcessTableStart(PPROCESS_TABLE Table)
+{
+	NTSTATUS Status;
+	LARGE_INTEGER TimerDueTime;
+
+	THashInitialize(&Table->HashTable, (PTHASH_HASH_FN)ProcessEntryHash, NULL, NULL, NULL);
+
+	Status = SysWorkerStart(&Table->Worker);
+	if (!NT_SUCCESS(Status)) {
+		goto start_failed;
+	}
+
+	TimerDueTime.QuadPart = 0;
+	KeSetTimerEx(&Table->Timer, TimerDueTime, 500, &Table->TimerDpc);
+	return STATUS_SUCCESS;
+
+start_failed:
+	KeCancelTimer(&Table->Timer);
+	KeFlushQueuedDpcs();
+	SysWorkerStop(&Table->Worker);
+	THashRelease(&Table->HashTable);
+
+	return Status;
+}
+
+VOID
+	ProcessTableStop(PPROCESS_TABLE Table)
+{
+	PSYS_WRK_ITEM WrkItem = NULL;
+
+	KeCancelTimer(&Table->Timer);
+	KeFlushQueuedDpcs();
+
+	WrkItem = SysWorkerAddWorkRef(&Table->Worker, ProcessTableRemoveAllWorker, Table);
+	if (WrkItem != NULL) {
+		KeWaitForSingleObject(&WrkItem->CompletionEvent, Executive, KernelMode, FALSE, NULL);
+		SysWrkItemDeref(WrkItem);
+	}
+
+	SysWorkerStop(&Table->Worker);
+	THashRelease(&Table->HashTable);
 }

