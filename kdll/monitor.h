@@ -8,6 +8,7 @@ typedef struct _MONITOR {
 	HANDLE	MainThreadHandle;
 	DWORD	Stopping;
 	HANDLE	hDevice;
+	HMODULE hGdiPlus;
 } MONITOR, *PMONITOR;
 
 

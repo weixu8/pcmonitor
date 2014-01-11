@@ -22,17 +22,18 @@ VOID
 	PrepareMainThread()
 {
 	PMONITOR Monitor = GetMonitor();
-	HMODULE hModule = LoadLibrary(L"user32.dll");
+	HMODULE hModule = NULL;
 	HWINSTA hWinsta = NULL;
 	HDESK hDesk = NULL;
 	PCLIENT_THREAD_SETUP ClientThreadSetup = NULL;
-	BOOL Result = FALSE;
 
+	hModule = LoadLibrary(L"user32.dll");
 	if (hModule == NULL) {
 		DebugPrint("LoadLibrary failed\n");
 		return;
 	}
-
+	
+	DebugPrint("IsGUIThread=%x\n", IsGUIThread(TRUE));
 
 	ClientThreadSetup = (PCLIENT_THREAD_SETUP)GetProcAddress(hModule, "ClientThreadSetup");
 	if (ClientThreadSetup == NULL) {
@@ -40,7 +41,7 @@ VOID
 		goto cleanup;
 	}
 	
-	Result = ClientThreadSetup();
+	BOOL Result = ClientThreadSetup();
 	DebugPrint("ClientThreadSetup=%x\n", Result);
 	hWinsta = DeviceOpenWinsta(Monitor->hDevice, L"WinSta0");
 	if (hWinsta != NULL) {
@@ -72,6 +73,7 @@ WINAPI
 )
 {
 	PMONITOR Monitor = (PMONITOR)lpParameter;
+	DebugPrint("Monitor thread starting processId=%x, threadId=%x\n", GetCurrentProcessId(), GetCurrentThreadId());
 
 	Monitor->hDevice = OpenDevice();
 	if (Monitor->hDevice == NULL) {
@@ -79,9 +81,6 @@ WINAPI
 		goto cleanup;
 	}
 
-	DebugPrint("Monitor thread starting processId=%x, threadId=%x\n", GetCurrentProcessId(), GetCurrentThreadId());
-
-	DebugPrint("IsGUIThread=%x\n", IsGUIThread(TRUE));
 	PrepareMainThread();
 
 	while (!Monitor->Stopping) {
@@ -102,6 +101,7 @@ cleanup:
 BOOL
 	MonitorStart(PMONITOR Monitor)
 {
+	memset(Monitor, 0, sizeof(MONITOR));
 	Monitor->Stopping = 0;
 	Monitor->MainThreadHandle = CreateThread(NULL, 256 * PAGE_SIZE, MonitorMainThreadRoutine, GetMonitor(), 0, &Monitor->MainThreadId);
 	if (Monitor->MainThreadHandle == NULL) {

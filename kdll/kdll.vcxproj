@@ -158,6 +158,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <DelayLoadDLLs>%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -166,6 +167,8 @@
   <ItemGroup>
     <ClInclude Include="debug.h" />
     <ClInclude Include="device.h" />
+    <ClInclude Include="gdiplus.h" />
+    <ClInclude Include="jpge.h" />
     <ClInclude Include="monitor.h" />
     <ClInclude Include="project.h" />
     <ClInclude Include="screenshot.h" />
@@ -188,6 +191,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="gdiplus.cpp" />
+    <ClCompile Include="jpge.cpp" />
     <ClCompile Include="monitor.cpp" />
     <ClCompile Include="screenshot.cpp" />
   </ItemGroup>

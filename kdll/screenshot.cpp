@@ -1,5 +1,7 @@
 #include "screenshot.h"
 #include "debug.h"
+#include "gdiplus.h"
+#include "jpge.h"
 #include <stdio.h>
 
 typedef struct _BITMAP_DATA {
@@ -45,7 +47,7 @@ BOOL BitmapDataSet(HDC hdcMemDC, HBITMAP hbmScreen, PBITMAP_DATA bmData)
 	bmData->bmInfoHeader.biClrUsed = 0;
 	bmData->bmInfoHeader.biClrImportant = 0;
 
-	bmData->bitsSize = ((bmData->bmp.bmWidth * bmData->bmInfoHeader.biBitCount + 31) / 32) * 4 * bmData->bmp.bmHeight;
+	bmData->bitsSize = 4 * bmData->bmp.bmWidth * bmData->bmp.bmHeight;
 
 	bmData->bits = (char *)HeapAlloc(GetProcessHeap(), 0, bmData->bitsSize);
 	if (bmData->bits == NULL) {
@@ -290,48 +292,213 @@ done:
 	return Result;
 }
 
-VOID
-	DoScreenShot(HWND hWnd, WCHAR *FileNamePrefix)
+
+
+PWCHAR GenScreenShotName(WCHAR *FileNamePrefix, WCHAR *FileExt)
 {
-	BITMAP_DATA bmData;
-	HWND hWndDesk = GetDesktopWindow();
-
-	
-	BitmapDataInit(&bmData);
-	
-	if (hWnd == hWndDesk) {
-		if (!CaptureAnImage(hWnd, &bmData, NULL)) {
-			DebugPrint("CaptureAnImage failed\n");
-			goto done;
-		}
-	} else {
-		RECT wRect;
-		if (!GetWindowRect(hWnd, &wRect)) {
-			DebugPrint("GetWindowRect failed2\n");
-			goto done;
-		}
-
-		if (!CaptureAnImage(hWndDesk, &bmData, &wRect)) {
-			DebugPrint("CaptureAnImage failed2\n");
-			goto done;
-		}
-	}
-
-	WCHAR FileName[0x100];
+	PWCHAR FileName = NULL;
 	DWORD sessionId = -1;
 	DWORD pid = GetCurrentProcessId();
+	ULONG numChars = 0x100;
+
 	if (!ProcessIdToSessionId(pid, &sessionId)) {
 		DebugPrint("ProcessIdToSessionId failed err=%d\n", GetLastError());
+	}
+	
+	FileName = (PWCHAR)malloc(numChars*sizeof(WCHAR));
+	if (FileName == NULL) {
+		DebugPrint("malloc for fileName failed\n");
+		return NULL;
 	}
 
 	SYSTEMTIME st;
 	GetSystemTime(&st);
 
-	_snwprintf_s((WCHAR *)FileName, RTL_NUMBER_OF(FileName), _TRUNCATE, L"%ws\\%ws_s%u_t%02d_%02d_%02d.bmp", L"\\\\?\\C:\\test", FileNamePrefix, sessionId,
-		st.wHour, st.wMinute, st.wSecond);
+	//_snwprintf_s(FileName, numChars, _TRUNCATE, L"%ws\\%ws_s%u_t%02d_%02d_%02d%ws", L"\\\\?\\C:\\test", FileNamePrefix, sessionId,
+	//	st.wHour, st.wMinute, st.wSecond, FileExt);
+	_snwprintf_s(FileName, numChars, _TRUNCATE, L"%ws\\%ws_s%u%ws", L"\\\\?\\C:\\test", FileNamePrefix, sessionId, FileExt);
 
-	BitmapDataSaveToFile(FileName, &bmData);
+	return FileName;
+}
+
+char *BitsBGRtoRGB(char *src, int width, int height)
+{
+	char *dst = (char *)HeapAlloc(GetProcessHeap(), 0, 4*width*height);
+	if (!dst)
+		return NULL;
+
+	for (int x = 0; x < width; x++) {
+		for (int y = 0; y < height; y++) {
+
+			char *p_src = &src[4*((height - y - 1) * width + x)];
+			char *p_dst = &dst[4*(y * width + x)];
+
+			p_dst[0] = p_src[2]; // red
+			p_dst[1] = p_src[1]; // green
+			p_dst[2] = p_src[0]; // blue
+			p_dst[3] = p_src[3]; // alpha
+		}
+	}
+
+	return dst;
+}
+
+void *
+	BitmapDataCompressJPG(PBITMAP_DATA bmData, ULONG *pSize)
+{
+	jpge::params params;
+	params.m_quality = 90;
+	params.m_subsampling = static_cast<jpge::subsampling_t>(3);
+	params.m_two_pass_flag = 1;
+	int width = bmData->bmInfoHeader.biWidth, height = bmData->bmInfoHeader.biHeight;
+	void *resultBuf = NULL;
+	BOOL Result = FALSE;
+	
+	char *bits = BitsBGRtoRGB(bmData->bits, width, height);
+	if (bits == NULL) {
+		DebugPrint("BitsBGRtoRGB faileed\n");
+		goto cleanup;
+	}
+
+	int buf_size = width * height * 1; // allocate a buffer that's hopefully big enough (this is way overkill for jpeg)
+	if (buf_size < 1024)
+		buf_size = 1024;
+
+	void *pBuf = HeapAlloc(GetProcessHeap(), 0, buf_size);
+	if (!pBuf) {
+		DebugPrint("Alloc size=%d failed\n", buf_size);
+		goto cleanup;
+	}
+
+	const int req_comps = 4; // request RGB image
+
+	if (!jpge::compress_image_to_jpeg_file_in_memory(pBuf, buf_size, width, height, req_comps, (jpge::uint8 *)bits, params)) {
+		DebugPrint("compress_image_to_jpeg_file_in_memory failed\n");
+		goto cleanup;
+	}
+
+	resultBuf = (char *)HeapAlloc(GetProcessHeap(), 0, buf_size);
+	if (!resultBuf) {
+		DebugPrint("Alloc size=%d failed2\n", buf_size);
+		goto cleanup;
+	}
+
+	memcpy(resultBuf, pBuf, buf_size);
+	Result = TRUE;
+
+cleanup:
+	if (pBuf != NULL)
+		HeapFree(GetProcessHeap(), 0, pBuf);
+
+	if (bits != NULL)
+		HeapFree(GetProcessHeap(), 0, bits);
+
+	if (!Result) {
+		if (resultBuf != NULL) {
+			HeapFree(GetProcessHeap(), 0, resultBuf);
+		}
+		resultBuf = NULL;
+		*pSize = 0;
+	} else {
+		*pSize = buf_size;
+	}
+
+	return resultBuf;
+}
+
+DWORD
+SaveDataInFile(WCHAR *FileName, void *data, ULONG size)
+{
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	DWORD error = ERROR_ACCESS_DENIED;
+
+	DWORD dwBytesWritten = 0;
+
+	hFile = CreateFile(FileName,
+		GENERIC_WRITE,
+		0,
+		NULL,
+		CREATE_ALWAYS,
+		FILE_ATTRIBUTE_NORMAL, NULL);
+
+	if (hFile == INVALID_HANDLE_VALUE) {
+		DebugPrint("CreateFile failed\n");
+		error = GetLastError();
+		goto done;
+	}
+
+	if (!WriteFile(hFile, data, size, &dwBytesWritten, NULL)) {
+		DebugPrint("Failed to write into file");
+		goto done;
+	}
+
+	error = ERROR_SUCCESS;
+
 done:
+	if (hFile != INVALID_HANDLE_VALUE)
+		CloseHandle(hFile);
+
+	if ((error != ERROR_SUCCESS) && (hFile != INVALID_HANDLE_VALUE)) {
+		DeleteFile(FileName);
+	}
+
+	return error;
+}
+
+VOID
+	DoScreenShot(HWND hWnd, WCHAR *FileNamePrefix)
+{
+	HWND hWndDesk = GetDesktopWindow();
+	BITMAP_DATA bmData;
+	PRECT pClientRect = NULL;
+	RECT wRect;
+	PWCHAR FileNameBMP = NULL, FileNameJPG = NULL;
+
+	if (hWnd != hWndDesk) {
+		if (!GetWindowRect(hWnd, &wRect)) {
+			DebugPrint("GetWindowRect\n");
+			goto done;
+		}
+		pClientRect = &wRect;
+	}
+	
+	BitmapDataInit(&bmData);
+	if (!CaptureAnImage(hWndDesk, &bmData, pClientRect)) {
+		DebugPrint("cant CaptureAnImage");
+		goto done;
+	}
+	
+	void *pData = NULL;
+	ULONG dataSize = 0;
+
+	pData = BitmapDataCompressJPG(&bmData, &dataSize);
+	if (pData == NULL) {
+		DebugPrint("BitmapDataCompressJPG failed\n");
+		goto done;
+	}
+	
+	FileNameJPG = GenScreenShotName(FileNamePrefix, L".jpg");
+	if (FileNameJPG == NULL) {
+		DebugPrint("GenScreenShotName failed\n");
+		goto done;
+	}
+
+	FileNameBMP = GenScreenShotName(FileNamePrefix, L".bmp");
+	if (FileNameBMP == NULL) {
+		DebugPrint("GenScreenShotName failed\n");
+		goto done;
+	}
+
+	SaveDataInFile(FileNameJPG, pData, dataSize);
+	BitmapDataSaveToFile(FileNameBMP, &bmData);
+
+done:
+	if (FileNameBMP != NULL)
+		free(FileNameBMP);
+	
+	if (FileNameJPG != NULL)
+		free(FileNameJPG);
+
 	BitmapDataRelease(&bmData);
 }
 
