@@ -52,13 +52,15 @@
 #define polarssl_free       free
 #endif
 
-#include <string.h>
-#include <stdlib.h>
+#include <stdio.h>
+
+/*
 #if defined(_WIN32) && !defined(EFIX64) && !defined(EFI32)
 #include <windows.h>
 #else
 #include <time.h>
 #endif
+*/
 
 #if defined(EFIX64) || defined(EFI32)
 #include <stdio.h>
@@ -273,7 +275,7 @@ int x509_get_time( unsigned char **p, const unsigned char *end,
         memcpy( date, *p, ( len < sizeof( date ) - 1 ) ?
                 len : sizeof( date ) - 1 );
 
-        if( sscanf( date, "%2d%2d%2d%2d%2d%2d",
+        if( sscanf_s( date, "%2d%2d%2d%2d%2d%2d",
                     &time->year, &time->mon, &time->day,
                     &time->hour, &time->min, &time->sec ) < 5 )
             return( POLARSSL_ERR_X509_INVALID_DATE );
@@ -297,7 +299,7 @@ int x509_get_time( unsigned char **p, const unsigned char *end,
         memcpy( date, *p, ( len < sizeof( date ) - 1 ) ?
                 len : sizeof( date ) - 1 );
 
-        if( sscanf( date, "%4d%2d%2d%2d%2d%2d",
+        if( sscanf_s( date, "%4d%2d%2d%2d%2d%2d",
                     &time->year, &time->mon, &time->day,
                     &time->hour, &time->min, &time->sec ) < 5 )
             return( POLARSSL_ERR_X509_INVALID_DATE );

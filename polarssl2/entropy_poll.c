@@ -43,26 +43,19 @@
 #if !defined(_WIN32_WINNT)
 #define _WIN32_WINNT 0x0400
 #endif
-#include <windows.h>
-#include <wincrypt.h>
 
 int platform_entropy_poll( void *data, unsigned char *output, size_t len,
                            size_t *olen )
 {
-    HCRYPTPROV provider;
+	NTSTATUS Status;
+
     ((void) data);
     *olen = 0;
 
-    if( CryptAcquireContext( &provider, NULL, NULL,
-                              PROV_RSA_FULL, CRYPT_VERIFYCONTEXT ) == FALSE )
-    {
-        return POLARSSL_ERR_ENTROPY_SOURCE_FAILED;
-    }
+	if (0 != g_KernelCallbacks.genRndBytes(output, len)) {
+		return POLARSSL_ERR_ENTROPY_SOURCE_FAILED;
+	}
 
-    if( CryptGenRandom( provider, (DWORD) len, output ) == FALSE )
-        return POLARSSL_ERR_ENTROPY_SOURCE_FAILED;
-
-    CryptReleaseContext( provider, 0 );
     *olen = len;
 
     return( 0 );

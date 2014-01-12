@@ -51,6 +51,7 @@
 #define polarssl_free       free
 #endif
 
+/*
 #include <string.h>
 #include <stdlib.h>
 #if defined(_WIN32) && !defined(EFIX64) && !defined(EFI32)
@@ -59,11 +60,13 @@
 #else
 #include <time.h>
 #endif
+*/
 
 #if defined(POLARSSL_FS_IO) || defined(EFIX64) || defined(EFI32)
 #include <stdio.h>
 #endif
 
+#include <stdio.h>
 /*
  *  Version  ::=  INTEGER  {  v1(0), v2(1)  }
  */

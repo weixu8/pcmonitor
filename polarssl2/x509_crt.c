@@ -57,11 +57,15 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
+
+/*
 #if defined(_WIN32) && !defined(EFIX64) && !defined(EFI32)
 #include <windows.h>
 #else
 #include <time.h>
 #endif
+*/
 
 #if defined(EFIX64) || defined(EFI32)
 #include <stdio.h>

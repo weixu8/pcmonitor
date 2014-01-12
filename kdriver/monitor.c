@@ -3,6 +3,7 @@
 #include <h/drvioctl.h>
 #include <inc/ntapiex.h>
 #include <inc/processtable.h>
+#include <inc/sslclient.h>
 
 #define __SUBCOMPONENT__ "ecore"
 
@@ -197,6 +198,8 @@ NTSTATUS
 {   
     KLog(LInfo, "MonitorStart");
  
+	ssl_client_test();
+
 	return MonitorStartInternal(&g_Monitor);
 }
 

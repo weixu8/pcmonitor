@@ -36,7 +36,7 @@
 #include "polarssl/x509.h"
 #endif
 
-#include <stdio.h>
+//#include <stdio.h>
 
 /*
  * Macro to automatically add the size of #define'd OIDs
@@ -545,6 +545,7 @@ FN_OID_GET_ATTR2(oid_get_pkcs12_pbe_alg, oid_pkcs12_pbe_alg_t, pkcs12_pbe_alg, m
 #if defined(_MSC_VER) && !defined snprintf && !defined(EFIX64) && \
     !defined(EFI32)
 #include <stdarg.h>
+#include <stdio.h>
 
 #if !defined vsnprintf
 #define vsnprintf _vsnprintf

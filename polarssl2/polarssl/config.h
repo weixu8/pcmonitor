@@ -31,9 +31,6 @@
 #ifndef POLARSSL_CONFIG_H
 #define POLARSSL_CONFIG_H
 
-#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_DEPRECATE)
-#define _CRT_SECURE_NO_DEPRECATE 1
-#endif
 
 /**
  * \name SECTION: System support
@@ -82,7 +79,7 @@
  *
  * Comment to disable the use of assembly code.
  */
-#define POLARSSL_HAVE_ASM
+//#define POLARSSL_HAVE_ASM
 
 /**
  * \def POLARSSL_HAVE_SSE2
@@ -100,7 +97,7 @@
  *
  * Comment if your system does not support time functions
  */
-#define POLARSSL_HAVE_TIME
+//#define POLARSSL_HAVE_TIME
 
 /**
  * \def POLARSSL_HAVE_IPV6
@@ -556,7 +553,7 @@
  *
  * Enable functions that use the filesystem.
  */
-#define POLARSSL_FS_IO
+//#define POLARSSL_FS_IO
 
 /**
  * \def POLARSSL_NO_DEFAULT_ENTROPY_SOURCES
@@ -645,7 +642,7 @@
  *
  * Enable the checkup functions (*_self_test).
  */
-#define POLARSSL_SELF_TEST
+//#define POLARSSL_SELF_TEST
 
 /**
  * \def POLARSSL_SSL_ALL_ALERT_MESSAGES
@@ -873,7 +870,7 @@
  *
  * This modules adds support for the AES-NI instructions on x86-64
  */
-#define POLARSSL_AESNI_C
+//#define POLARSSL_AESNI_C
 
 /**
  * \def POLARSSL_AES_C
@@ -1356,7 +1353,7 @@
  *
  * Enable this layer to allow use of alternative memory allocators.
  */
-//#define POLARSSL_MEMORY_C
+#define POLARSSL_MEMORY_C
 
 /**
  * \def POLARSSL_MEMORY_BUFFER_ALLOC_C
@@ -1382,7 +1379,7 @@
  *
  * This module provides TCP/IP networking routines.
  */
-#define POLARSSL_NET_C
+//#define POLARSSL_NET_C
 
 /**
  * \def POLARSSL_OID_C
@@ -1419,7 +1416,7 @@
  *
  * This modules adds support for the VIA PadLock on x86.
  */
-#define POLARSSL_PADLOCK_C
+//#define POLARSSL_PADLOCK_C
 
 /**
  * \def POLARSSL_PBKDF2_C
@@ -1713,7 +1710,7 @@
  *
  * This module is used by the HAVEGE random number generator.
  */
-#define POLARSSL_TIMING_C
+//#define POLARSSL_TIMING_C
 
 /**
  * \def POLARSSL_VERSION_C
@@ -2164,5 +2161,8 @@
 #if defined(POLARSSL_X509_CSR_WRITE_C) && ( !defined(POLARSSL_X509_CREATE_C) )
 #error "POLARSSL_X509_CSR_WRITE_C defined, but not all prerequisites"
 #endif
+
+
+#include "kernel.h"
 
 #endif /* config.h */

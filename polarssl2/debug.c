@@ -30,7 +30,7 @@
 #include "polarssl/debug.h"
 
 #include <stdarg.h>
-#include <stdlib.h>
+#include <stdio.h>
 
 #if defined(EFIX64) || defined(EFI32)
 #include <stdio.h>

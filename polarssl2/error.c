@@ -159,6 +159,7 @@
 
 
 #include <string.h>
+#include <stdio.h>
 
 #if defined(_MSC_VER) && !defined  snprintf && !defined(EFIX64) && \
     !defined(EFI32)

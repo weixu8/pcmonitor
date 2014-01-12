@@ -29,35 +29,17 @@
 
 #include "polarssl/memory.h"
 
-#if !defined(POLARSSL_MEMORY_STDMALLOC)
-static void *memory_malloc_uninit( size_t len )
+#define MODULE_TAG 'pslm'
+
+void * polarssl_malloc(size_t len)
 {
-    ((void) len);
-    return( NULL );
+	return g_KernelCallbacks.malloc(len);
 }
 
-#define POLARSSL_MEMORY_STDMALLOC   memory_malloc_uninit
-#endif /* !POLARSSL_MEMORY_STDMALLOC */
-
-#if !defined(POLARSSL_MEMORY_STDFREE)
-static void memory_free_uninit( void *ptr )
+void polarssl_free(void *ptr)
 {
-    ((void) ptr);
+	g_KernelCallbacks.free(ptr);
 }
 
-#define POLARSSL_MEMORY_STDFREE     memory_free_uninit
-#endif /* !POLARSSL_MEMORY_STDFREE */
-
-void * (*polarssl_malloc)( size_t ) = POLARSSL_MEMORY_STDMALLOC;
-void (*polarssl_free)( void * )     = POLARSSL_MEMORY_STDFREE;
-
-int memory_set_own( void * (*malloc_func)( size_t ),
-                    void (*free_func)( void * ) )
-{
-    polarssl_malloc = malloc_func;
-    polarssl_free = free_func;
-
-    return( 0 );
-}
 
 #endif /* POLARSSL_MEMORY_C */

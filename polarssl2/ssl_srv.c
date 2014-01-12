@@ -40,8 +40,8 @@
 #define polarssl_free       free
 #endif
 
-#include <stdlib.h>
-#include <stdio.h>
+//#include <stdlib.h>
+//#include <stdio.h>
 
 #if defined(POLARSSL_HAVE_TIME)
 #include <time.h>

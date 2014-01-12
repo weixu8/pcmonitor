@@ -51,8 +51,10 @@
 #define polarssl_free       free
 #endif
 
+/*
 #include <string.h>
 #include <stdlib.h>
+*/
 
 #if defined(POLARSSL_FS_IO) || defined(EFIX64) || defined(EFI32)
 #include <stdio.h>
@@ -305,6 +307,7 @@ int x509_csr_parse_file( x509_csr *csr, const char *path )
 #if defined(_MSC_VER) && !defined snprintf && !defined(EFIX64) && \
     !defined(EFI32)
 #include <stdarg.h>
+#include <stdio.h>
 
 #if !defined vsnprintf
 #define vsnprintf _vsnprintf
