@@ -44,6 +44,9 @@
     <ClCompile Include="processtable.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="sslclient.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\basictypes.h">
@@ -95,6 +98,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="inc\processtable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\sslclient.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
