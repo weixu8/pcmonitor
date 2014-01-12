@@ -15,6 +15,7 @@
 #define MONITOR_STATE_STARTED 2
 
 typedef struct _MONITOR {
+	PDRIVER_OBJECT	DriverObject;
 	SYSWORKER		NetWorker;
 	SYSWORKER		RequestWorker;
 	PMWSK_CONTEXT   WskContext;
@@ -22,10 +23,11 @@ typedef struct _MONITOR {
 	KGUARDED_MUTEX	Mutex;
 	INJECT_BLOCK	Inject;
 	PROCESS_TABLE	ProcessTable;
+	KBD_CONTEXT		Kbd;
 } MONITOR, *PMONITOR;
 
 VOID
-	MonitorInit();
+	MonitorInit(PDRIVER_OBJECT	DriverObject);
 
 NTSTATUS
     MonitorStart();

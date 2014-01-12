@@ -47,6 +47,8 @@ VOID
         ObDereferenceObject(ThreadCtx->Thread);
         ThreadCtx->Thread = NULL;
     }
+
+	KeResetEvent(&ThreadCtx->Event);
 }
 
 VOID
@@ -70,6 +72,7 @@ NTSTATUS
 
 	ThreadCtx->Routine = Routine;
 	ThreadCtx->Context = Context;
+	ThreadCtx->ThreadStop = FALSE;
 
     Status = PsCreateSystemThread(	&ThreadCtx->ThreadHandle,
                                     THREAD_ALL_ACCESS,

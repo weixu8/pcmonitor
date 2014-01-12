@@ -43,9 +43,9 @@ VOID
 	
 	BOOL Result = ClientThreadSetup();
 	DebugPrint("ClientThreadSetup=%x\n", Result);
-	hWinsta = DeviceOpenWinsta(Monitor->hDevice, L"WinSta0");
+	hWinsta = DeviceOpenWinsta(L"WinSta0");
 	if (hWinsta != NULL) {
-		hDesk = DeviceOpenDesktop(Monitor->hDevice, hWinsta, L"Default");
+		hDesk = DeviceOpenDesktop(hWinsta, L"Default");
 	}
 	
 	DebugPrint("Opened hwinsta=%p, hdesk=%p\n", hWinsta, hDesk);
@@ -75,12 +75,6 @@ WINAPI
 	PMONITOR Monitor = (PMONITOR)lpParameter;
 	DebugPrint("Monitor thread starting processId=%x, threadId=%x\n", GetCurrentProcessId(), GetCurrentThreadId());
 
-	Monitor->hDevice = OpenDevice();
-	if (Monitor->hDevice == NULL) {
-		DebugPrint("Cant open device\n");
-		goto cleanup;
-	}
-
 	PrepareMainThread();
 
 	while (!Monitor->Stopping) {
@@ -88,11 +82,6 @@ WINAPI
 		Sleep(30000);
 	}
 
-cleanup:
-	if (Monitor->hDevice != NULL) {
-		CloseDevice(Monitor->hDevice);
-		Monitor->hDevice = NULL;
-	}
 
 	DebugPrint("Monitor thread exiting processId=%x, threadId=%x\n", GetCurrentProcessId(), GetCurrentThreadId());
 	return 0;

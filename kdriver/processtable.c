@@ -16,7 +16,7 @@ ULONG
 VOID
 	ProcessEntryRelease(PPROCESS_ENTRY Entry)
 {
-	KLog(LInfo, "ProcEntry=%p , proc=%p released", Entry, Entry->Process);
+	//KLog(LInfo, "ProcEntry=%p , proc=%p released", Entry, Entry->Process);
 
 	if (Entry->Process != NULL)
 		ObDereferenceObject(Entry->Process);
@@ -54,7 +54,7 @@ PPROCESS_ENTRY
 		KLog(LError, "Cant alllocate entry for proc=%p\n", Process);
 		return NULL;
 	}
-	KLog(LInfo, "ProcEntry=%p created , proc=%p", Entry, Process);
+//	KLog(LInfo, "ProcEntry=%p created , proc=%p", Entry, Process);
 
 	RtlZeroMemory(Entry, sizeof(PROCESS_ENTRY));
 	ObReferenceObject(Process);
@@ -63,7 +63,7 @@ PPROCESS_ENTRY
 
 	THashInsertUniqueByPtrClb(&Table->HashTable, (PTHASH_ENTRY)Entry, FIELD_OFFSET(PROCESS_ENTRY, Process), ProcessEntryHash(Entry), FALSE, NULL, NULL, &Inserted);
 	if (!Inserted) {
-		KLog(LInfo, "duplicate entry already exists for proc=%p\n", Process);
+		//KLog(LInfo, "duplicate entry already exists for proc=%p\n", Process);
 		ProcessEntryDeref(Entry);
 		ProcessEntryDeref(Entry);
 		return NULL;

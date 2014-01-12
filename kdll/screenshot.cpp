@@ -109,8 +109,8 @@ DWORD
 		FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (hFile == INVALID_HANDLE_VALUE) {
-		DebugPrint("CreateFile failed\n");
 		error = GetLastError();
+		DebugPrint("CreateFile failed filename=%ws, error=%d\n", FileName, error);
 		goto done;
 	}
 
@@ -422,8 +422,8 @@ SaveDataInFile(WCHAR *FileName, void *data, ULONG size)
 		FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (hFile == INVALID_HANDLE_VALUE) {
-		DebugPrint("CreateFile failed\n");
 		error = GetLastError();
+		DebugPrint("CreateFile failed filename=%ws, error=%d\n", FileName, error);
 		goto done;
 	}
 

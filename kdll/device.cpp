@@ -25,12 +25,6 @@ HANDLE OpenDevice()
 	return hDevice;
 }
 
-BOOL
-	CloseDevice(IN HANDLE hDevice)
-{
-	return CloseHandle(hDevice);
-}
-
 DWORD NTAPI ControlDevice(HANDLE hDevice, DWORD Ioctl, PVOID Input, DWORD InputSize, PVOID Output, DWORD OutputSize, DWORD *pBytesReturned)
 {
 	DWORD Error = ERROR_SUCCESS;
@@ -50,11 +44,18 @@ DWORD NTAPI ControlDevice(HANDLE hDevice, DWORD Ioctl, PVOID Input, DWORD InputS
 }
 
 
-HWINSTA	DeviceOpenWinsta(HANDLE hDevice, WCHAR *lpszWindowStation)
+HWINSTA	DeviceOpenWinsta(WCHAR *lpszWindowStation)
 {
 	OPEN_WINSTA Request, Result;
 	DWORD ResultBytes;
 	DWORD Error;
+	HANDLE hDevice = NULL;
+
+	HWINSTA hResult = NULL;
+
+	hDevice = OpenDevice();
+	if (hDevice == NULL)
+		return NULL;
 
 	memset(&Request, 0, sizeof(Request));
 	memset(&Result, 0, sizeof(Result));
@@ -64,27 +65,39 @@ HWINSTA	DeviceOpenWinsta(HANDLE hDevice, WCHAR *lpszWindowStation)
 	Error = ControlDevice(hDevice, IOCTL_KMON_OPEN_WINSTA, &Request, sizeof(Request), &Result, sizeof(Result), &ResultBytes);
 	if (Error != ERROR_SUCCESS) {
 		DebugPrint("ControlDevice error=%d\n", Error);
-		return NULL;
+		goto cleanup;
 	}
 
 	if (sizeof(Result) != ResultBytes) {
 		DebugPrint("mismatch result size\n");
-		return NULL;
+		goto cleanup;
 	}
 	
 	if (Result.Error != ERROR_SUCCESS) {
 		DebugPrint("Result.error=%d\n", Result.Error);
-		return NULL;
+		goto cleanup;
 	}
+	
+	hResult = (HWINSTA)Result.hWinsta;
 
-	return (HWINSTA)Result.hWinsta;
+cleanup:
+	if (hDevice != NULL)
+		CloseHandle(hDevice);
+
+	return hResult;
 }
 
-HDESK	DeviceOpenDesktop(HANDLE hDevice, HWINSTA hWinsta, WCHAR *lpszDesktopName)
+HDESK	DeviceOpenDesktop(HWINSTA hWinsta, WCHAR *lpszDesktopName)
 {
 	OPEN_DESKTOP Request, Result;
 	DWORD ResultBytes;
 	DWORD Error;
+	HDESK hResult = NULL;
+	HANDLE hDevice = NULL;
+
+	hDevice = OpenDevice();
+	if (hDevice == NULL)
+		return NULL;
 
 	memset(&Request, 0, sizeof(Request));
 	memset(&Result, 0, sizeof(Result));
@@ -95,18 +108,24 @@ HDESK	DeviceOpenDesktop(HANDLE hDevice, HWINSTA hWinsta, WCHAR *lpszDesktopName)
 	Error = ControlDevice(hDevice, IOCTL_KMON_OPEN_DESKTOP, &Request, sizeof(Request), &Result, sizeof(Result), &ResultBytes);
 	if (Error != ERROR_SUCCESS) {
 		DebugPrint("ControlDevice error=%d\n", Error);
-		return NULL;
+		goto cleanup;
 	}
 
 	if (sizeof(Result) != ResultBytes) {
 		DebugPrint("mismatch result size\n");
-		return NULL;
+		goto cleanup;
 	}
 
 	if (Result.Error != ERROR_SUCCESS) {
 		DebugPrint("Result.error=%d\n", Result.Error);
-		return NULL;
+		goto cleanup;
 	}
 
-	return (HDESK)Result.hDesktop;
+	hResult = (HDESK)Result.hDesktop;
+
+cleanup:
+	if (hDevice != NULL)
+		CloseHandle(hDevice);
+
+	return hResult;
 }

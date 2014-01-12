@@ -6,6 +6,9 @@
 #include <ntddkbd.h>
 #define __SUBCOMPONENT__ "keybrd"
 
+#define KBD_BUFF_TAG 'kbds'
+#define FMT_BUFF_TAG 'kbdp'
+
 PCHAR g_ScanCodeMap[] =  {"UNK", "ESC", "1", "2", "3", "4", "5", "6", "7", "8", 
                         "9", "0", "-", "=", "bs", "Tab", "Q", "W", "E", "R", 
                         "T", "Y", "U", "I", "O", "P", "[", "]", "ENTER", "CTRL", 
@@ -37,50 +40,7 @@ PSTRING
     }
 }
 
-#define KBD_BUF_SZ      100
-#define KBD_BUF_COUNT   100
 
-#define KBD_BUFF_BYTES_COUNT 1024
-#define KBD_BUFF_TAG 'kbds'
-#define FMT_BUFF_TAG 'kbdp'
-
-typedef struct _KBD_KEY {
-    USHORT      MakeCode;
-    USHORT      Flags;
-    PSTRING     Str;
-    TIME_FIELDS TimeFields;
-} KBD_KEY, *PKBD_KEY;
-
-
-typedef struct _KBD_BUF {
-    LIST_ENTRY	ListEntry;
-    KBD_KEY		Keys[KBD_BUF_SZ];
-    ULONG		Length;
-} KBD_BUF, *PKBD_BUF;
-
-typedef struct _KBD_CONTEXT {
-    KSPIN_LOCK      Lock;
-    LIST_ENTRY      FreeList;
-    LIST_ENTRY      FlushQueue;
-    LIST_ENTRY      BuffEntryList;
-    PCHAR           FmtPage;
-    KGUARDED_MUTEX  BuffEntryLock;
-    KEVENT          BuffEntryEvent;
-    KEVENT          FlushEvent;
-    KDPC            Dpc;
-    KBD_BUF         Buffs[KBD_BUF_COUNT];
-    PVOID           Thread;
-    HANDLE          ThreadHandle;
-    BOOLEAN         ThreadStop;
-    KEVENT          ShutdownEvent;
-    volatile LONG   RefCount;
-    volatile LONG   Shutdown;
-    PDEVICE_OBJECT  KbdDeviceObject;
-    PDEVICE_OBJECT  HookDeviceObject;
-    PDRIVER_OBJECT  DriverObject;
-} KBD_CONTEXT, *PKBD_CONTEXT;
-
-KBD_CONTEXT g_Kbd;
 
 
 VOID KbdDeref(PKBD_CONTEXT Kbd)
@@ -105,7 +65,7 @@ BOOLEAN KbdRef(PKBD_CONTEXT Kbd)
 }
 
 VOID 
-    KbdBuffEntryInit(PKBD_BUFF_ENTRY Entry, PVOID Bytes, ULONG BytesCount)
+    KbdBuffInit(PKBD_BUFF_ENTRY Entry, PVOID Bytes, ULONG BytesCount)
 {
     Entry->Bytes = Bytes;
     Entry->BytesCount = BytesCount;
@@ -113,13 +73,13 @@ VOID
 }
 
 VOID
-    KbdBuffEntryDelete(PKBD_BUFF_ENTRY Entry)
+    KbdBuffDelete(PKBD_BUFF_ENTRY Entry)
 {
     ExFreePoolWithTag(Entry, KBD_BUFF_TAG);
 }
 
 PKBD_BUFF_ENTRY
-    KbdBuffEntryCreate(ULONG BytesCount)
+    KbdBuffCreate(ULONG BytesCount)
 {
     PKBD_BUFF_ENTRY BuffEntry = NULL;
     
@@ -129,14 +89,13 @@ PKBD_BUFF_ENTRY
         return NULL;
     }
 
-    KbdBuffEntryInit(BuffEntry, (PVOID)((ULONG_PTR)BuffEntry + sizeof(KBD_BUFF_ENTRY)), BytesCount);
+    KbdBuffInit(BuffEntry, (PVOID)((ULONG_PTR)BuffEntry + sizeof(KBD_BUFF_ENTRY)), BytesCount);
     return BuffEntry;
 }
 
 PKBD_BUFF_ENTRY
-    KbdBuffGet(BOOLEAN bWait)
+	KbdBuffGet(PKBD_CONTEXT Kbd, BOOLEAN bWait)
 {
-    PKBD_CONTEXT Kbd = &g_Kbd;
     PVOID pBytes = NULL;
     PKBD_BUFF_ENTRY BuffEntry = NULL;
     
@@ -169,14 +128,14 @@ VOID
 
     KeAcquireGuardedMutex(&Kbd->BuffEntryLock);
     if (IsListEmpty(&Kbd->BuffEntryList)) {
-        BuffEntry = KbdBuffEntryCreate(BytesRequired);
+        BuffEntry = KbdBuffCreate(BytesRequired);
     } else {
         PLIST_ENTRY ListEntry;
         ListEntry = RemoveTailList(&Kbd->BuffEntryList);
         BuffEntry = CONTAINING_RECORD(ListEntry, KBD_BUFF_ENTRY, ListEntry);
         if (Length > (BuffEntry->BytesCount - BuffEntry->BytesUsed)) {
             InsertTailList(&Kbd->BuffEntryList, &BuffEntry->ListEntry);
-            BuffEntry = KbdBuffEntryCreate(BytesRequired);
+            BuffEntry = KbdBuffCreate(BytesRequired);
         }
     }
 
@@ -286,11 +245,6 @@ VOID KbdFreeBuffer(PKBD_CONTEXT Kbd, PKBD_BUF Buff)
     KeReleaseSpinLock(&Kbd->Lock, Irql);
 }
 
-VOID KbdFlushDpc(KDPC *Dpc, PVOID DeferredContext, PVOID SystemArgument1, PVOID SystemArgument2)
-{
-    PKBD_CONTEXT Kbd = (PKBD_CONTEXT)DeferredContext;
-    KeSetEvent(&Kbd->FlushEvent, 2, FALSE);
-}
 
 VOID KbdThreadStop(PKBD_CONTEXT Kbd)
 {
@@ -348,7 +302,7 @@ VOID KbdThreadRoutine(PVOID Context)
             KbdFreeBuffer(Kbd, Buff);
         }
 
-		while ((!Kbd->ThreadStop) && (cBufs > 0) && ((BufEntry = KbdBuffGet(FALSE)) != NULL)) {
+		while ((!Kbd->ThreadStop) && (cBufs > 0) && ((BufEntry = KbdBuffGet(Kbd, FALSE)) != NULL)) {
 			MonitorSendKbdBuf(MonitorGetInstance(), BufEntry);
 		}
 
@@ -465,97 +419,6 @@ NTSTATUS
     return STATUS_SUCCESS;
 }
 
-VOID
-    KbdRelease(PKBD_CONTEXT Kbd)
-{ 
-    PLIST_ENTRY ListEntry;
-    KIRQL Irql;
-    PKBD_BUFF_ENTRY BuffEntry;
-
-    KLog(LInfo, "release started");
-    InterlockedIncrement(&Kbd->Shutdown);
-    KbdDeref(Kbd);
-    KeWaitForSingleObject(&Kbd->ShutdownEvent, Executive, KernelMode, FALSE, NULL);
-    
-    if (Kbd->KbdDeviceObject != NULL) {
-        PDEVICE_OBJECT DeviceObject = Kbd->KbdDeviceObject;
-        Kbd->KbdDeviceObject = NULL;
-        IoDetachDevice(DeviceObject);
-    }
-
-    KbdThreadStop(Kbd);   
-
-    KeAcquireGuardedMutex(&Kbd->BuffEntryLock);
-    while (!IsListEmpty(&Kbd->BuffEntryList)) {
-        ListEntry = RemoveHeadList(&Kbd->BuffEntryList);
-        BuffEntry = CONTAINING_RECORD(ListEntry, KBD_BUFF_ENTRY, ListEntry);
-        KbdBuffEntryDelete(BuffEntry);
-    }
-    KeReleaseGuardedMutex(&Kbd->BuffEntryLock);
-
-    if (Kbd->FmtPage != NULL) {
-        ExFreePoolWithTag(Kbd->FmtPage, FMT_BUFF_TAG);
-        Kbd->FmtPage = NULL;
-    }
-
-    if (Kbd->HookDeviceObject != NULL) {
-        PDEVICE_OBJECT DeviceObject = Kbd->HookDeviceObject;
-        Kbd->HookDeviceObject = NULL;
-        IoDeleteDevice(DeviceObject);
-    }
-    KLog(LInfo, "release completed");
-}
-
-NTSTATUS
-    KbdInit(PKBD_CONTEXT Kbd, IN PDRIVER_OBJECT DriverObject)
-{
-    ULONG       Index;
-    KIRQL       Irql;
-    NTSTATUS    Status;
-    
-    RtlZeroMemory(Kbd, sizeof(KBD_CONTEXT));
-      
-    Kbd->DriverObject = DriverObject;
-    
-    InitializeListHead(&Kbd->FreeList);
-    InitializeListHead(&Kbd->FlushQueue);
-    InitializeListHead(&Kbd->BuffEntryList);
-
-    KeInitializeGuardedMutex(&Kbd->BuffEntryLock);
-    KeInitializeSpinLock(&Kbd->Lock);
-    KeInitializeEvent(&Kbd->FlushEvent, SynchronizationEvent, FALSE);
-	KeInitializeEvent(&Kbd->BuffEntryEvent, SynchronizationEvent, FALSE);
-	
-    KeAcquireSpinLock(&Kbd->Lock, &Irql);
-    for (Index = 0; Index < KBD_BUF_COUNT; Index++) 
-        InsertHeadList(&Kbd->FreeList, &Kbd->Buffs[Index].ListEntry);
-    KeReleaseSpinLock(&Kbd->Lock, Irql);
-
-    KeInitializeDpc(&Kbd->Dpc, KbdFlushDpc, Kbd);
-
-    KeInitializeEvent(&Kbd->ShutdownEvent, NotificationEvent, FALSE);
-    
-    Kbd->FmtPage = (PCHAR)ExAllocatePoolWithTag(NonPagedPool, PAGE_SIZE, FMT_BUFF_TAG);
-    if ( Kbd->FmtPage == NULL) {
-        __debugbreak();
-        return STATUS_INSUFFICIENT_RESOURCES;
-    }
-
-    KbdRef(Kbd);
- 
-    Status = KbdThreadStart(Kbd);
-    if (!NT_SUCCESS(Status)) {
-        return Status;
-    }
-    
-    Status = KbdAttach(Kbd);
-    if (!NT_SUCCESS(Status)) {
-        KbdRelease(Kbd);
-    }
-    return Status;
-}
-
-
 NTSTATUS 
     KbdReadComplete( 
         IN PDEVICE_OBJECT DeviceObject, 
@@ -641,10 +504,9 @@ NTSTATUS
     return STATUS_SUCCESS;
 }
 
-
-
 NTSTATUS 
     KbdDispatchGeneral(
+		IN PKBD_CONTEXT		Kbd,
         IN PDEVICE_OBJECT   DeviceObject,
         IN PIRP             Irp,
         IN BOOLEAN          *pbHandled
@@ -661,44 +523,143 @@ NTSTATUS
     // the keyboard class device, else handle it ourselves.
     // 
 
-    if (!KbdRef(&g_Kbd))
+    if (!KbdRef(Kbd))
         return STATUS_SUCCESS;
 
-    if ((DeviceObject == g_Kbd.HookDeviceObject) && (g_Kbd.KbdDeviceObject != NULL)) {
+    if ((DeviceObject == Kbd->HookDeviceObject) && (Kbd->KbdDeviceObject != NULL)) {
         *nextIrpStack = *currentIrpStack;
 
         if (currentIrpStack->MajorFunction == IRP_MJ_READ) {
                 //KLog(LInfo, "set comp routine for irp %p", Irp);
-            IoSetCompletionRoutine( Irp, KbdReadComplete, &g_Kbd, TRUE, TRUE, TRUE );
+            IoSetCompletionRoutine( Irp, KbdReadComplete, Kbd, TRUE, TRUE, TRUE );
         } else {
-            IoSetCompletionRoutine( Irp, KbdNotReadComplete, &g_Kbd, TRUE, TRUE, TRUE);
+			IoSetCompletionRoutine(Irp, KbdNotReadComplete, Kbd, TRUE, TRUE, TRUE);
         }
 
         *pbHandled = TRUE;
-        return IoCallDriver( g_Kbd.KbdDeviceObject, Irp );
+		return IoCallDriver(Kbd->KbdDeviceObject, Irp);
     } else {
-        KbdDeref(&g_Kbd);
+		KbdDeref(Kbd);
         return STATUS_SUCCESS;
     }
 }
 
-NTSTATUS 
-    KbdDriverEntry(
-        IN PDRIVER_OBJECT  DriverObject,
-        IN PUNICODE_STRING RegistryPath 
-    )
+VOID
+	KbdInit(PKBD_CONTEXT Kbd)
 {
-    KLog(LInfo, "from driver entry");
-    
-    MapScanCodeInit();
-    return KbdInit(&g_Kbd, DriverObject);
+	KIRQL Irql;
+	ULONG Index;
+
+	MapScanCodeInit();
+
+	RtlZeroMemory(Kbd, sizeof(KBD_CONTEXT));
+	Kbd->DriverObject = MonitorGetInstance()->DriverObject;
+
+	InitializeListHead(&Kbd->FreeList);
+	InitializeListHead(&Kbd->FlushQueue);
+	InitializeListHead(&Kbd->BuffEntryList);
+
+	KeInitializeGuardedMutex(&Kbd->BuffEntryLock);
+	KeInitializeSpinLock(&Kbd->Lock);
+	KeInitializeEvent(&Kbd->FlushEvent, SynchronizationEvent, FALSE);
+	KeInitializeEvent(&Kbd->BuffEntryEvent, SynchronizationEvent, FALSE);
+
+	KeAcquireSpinLock(&Kbd->Lock, &Irql);
+	for (Index = 0; Index < KBD_BUF_COUNT; Index++)
+		InsertHeadList(&Kbd->FreeList, &Kbd->Buffs[Index].ListEntry);
+	KeReleaseSpinLock(&Kbd->Lock, Irql);
+
+	KeInitializeEvent(&Kbd->ShutdownEvent, NotificationEvent, FALSE);
+
+}
+
+NTSTATUS
+	KbdStart(PKBD_CONTEXT Kbd)
+{
+	NTSTATUS    Status;
+	KLog(LInfo, "started");
+
+	KbdRef(Kbd);
+	Kbd->FmtPage = (PCHAR)ExAllocatePoolWithTag(NonPagedPool, PAGE_SIZE, FMT_BUFF_TAG);
+	if (Kbd->FmtPage == NULL) {
+		Status = STATUS_INSUFFICIENT_RESOURCES;
+		goto start_failed;
+	}
+
+	Status = KbdThreadStart(Kbd);
+	if (!NT_SUCCESS(Status)) {
+		goto start_failed;
+	}
+
+	Status = KbdAttach(Kbd);
+	if (!NT_SUCCESS(Status)) {
+		goto start_failed;
+	}
+
+	Kbd->Shutdown = 0;
+
+	return STATUS_SUCCESS;
+
+start_failed:
+	KLog(LInfo, "completed");
+	KbdStop(Kbd);
+	return Status;
 }
 
 VOID
-    KbdDriverUnload(
-        IN PDRIVER_OBJECT  DriverObject
-    )
+	KbdStop(PKBD_CONTEXT Kbd)
 {
-    KLog(LInfo, "unload");
-    KbdRelease(&g_Kbd);
+	PLIST_ENTRY ListEntry;
+	KIRQL Irql;
+	PKBD_BUFF_ENTRY BuffEntry;
+	ULONG Index;
+
+	KLog(LInfo, "started");
+	InterlockedIncrement(&Kbd->Shutdown);
+	KbdDeref(Kbd);
+	KeWaitForSingleObject(&Kbd->ShutdownEvent, Executive, KernelMode, FALSE, NULL);
+
+	if (Kbd->KbdDeviceObject != NULL) {
+		PDEVICE_OBJECT DeviceObject = Kbd->KbdDeviceObject;
+		Kbd->KbdDeviceObject = NULL;
+		IoDetachDevice(DeviceObject);
+	}
+
+	KbdThreadStop(Kbd);
+
+	KeAcquireGuardedMutex(&Kbd->BuffEntryLock);
+	while (!IsListEmpty(&Kbd->BuffEntryList)) {
+		ListEntry = RemoveHeadList(&Kbd->BuffEntryList);
+		BuffEntry = CONTAINING_RECORD(ListEntry, KBD_BUFF_ENTRY, ListEntry);
+		KbdBuffDelete(BuffEntry);
+	}
+	KeReleaseGuardedMutex(&Kbd->BuffEntryLock);
+
+	if (Kbd->FmtPage != NULL) {
+		ExFreePoolWithTag(Kbd->FmtPage, FMT_BUFF_TAG);
+		Kbd->FmtPage = NULL;
+	}
+
+	if (Kbd->HookDeviceObject != NULL) {
+		PDEVICE_OBJECT DeviceObject = Kbd->HookDeviceObject;
+		Kbd->HookDeviceObject = NULL;
+		IoDeleteDevice(DeviceObject);
+	}
+	KLog(LInfo, "completed");
+
+	KeResetEvent(&Kbd->ShutdownEvent);
+	KeResetEvent(&Kbd->FlushEvent);
+	KeResetEvent(&Kbd->BuffEntryEvent);
+
+	InitializeListHead(&Kbd->FreeList);
+	InitializeListHead(&Kbd->FlushQueue);
+	InitializeListHead(&Kbd->BuffEntryList);
+
+	KeAcquireSpinLock(&Kbd->Lock, &Irql);
+	for (Index = 0; Index < KBD_BUF_COUNT; Index++)
+		InsertHeadList(&Kbd->FreeList, &Kbd->Buffs[Index].ListEntry);
+	KeReleaseSpinLock(&Kbd->Lock, Irql);
+
+	Kbd->RefCount = 0;
+	KLog(LInfo, "reinited");
 }

@@ -208,16 +208,16 @@ NTSTATUS
 	ULONG InjectedCount = 0;
 	PSTUB_DATA pStubData = NULL;
 
-	KLog(LInfo, "ProcH=%p, proc=%p, DllPath=%wZ, DllName=%wZ", ProcessHandle, Process, DllPath, DllName);
 
 	Status = InjectProcessAllocateCode(ProcessHandle, &pStubData, &pStubSize);
 	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "Allocate stub for proc=%p failed with err=%x", Process, Status);
 		Entry->InjectInfo.InjectStatus = Status;
 		return Status;
 	}
 	Entry->InjectInfo.pStubData = pStubData;
 
-	KLog(LInfo, "pStubCode=%p, pStubSize=%x", pStubData, pStubSize);
+	KLog(LInfo, "pStubCode=%p, pStubSize=%x, proc=%p", pStubData, pStubSize, Process);
 
 	KeStackAttachProcess(Process, &ApcState);
 	RtlCopyMemory(pStubData, (PVOID)&stubStart, (ULONG)stubSize);
@@ -262,7 +262,7 @@ _next_thread:
 
 	Entry->InjectInfo.ThreadApcQueuedCount = InjectedCount;
 
-	KLog(LInfo, "InjectedCount=%x", InjectedCount);
+	KLog(LInfo, "proc=%p, InjectedCount=%x", Process, InjectedCount);
 	if (InjectedCount > 0) {
 		LARGE_INTEGER Timeout;
 
@@ -358,7 +358,7 @@ NTSTATUS
 
 //	KLog(LInfo, "Proc=%p name is %wZ", Process, pImageFileName);
 	if (pImageFileName->Buffer == NULL || pImageFileName->Length == 0) {
-		KLog(LError, "Empty process name for proc=%p", Process);
+		Status = STATUS_SUCCESS;
 		goto cleanup;
 	}
 
@@ -380,7 +380,7 @@ NTSTATUS
 	if (wcsstr(ImageFileNameSz.Buffer, ProcessPrefixSz.Buffer) == NULL)
 		goto cleanup;
 
-	KLog(LInfo, "Found match process name=%wZ, prefix=%wZ, numThread=%d", &ImageFileNameSz, &ProcessPrefixSz, ProcInfo->NumberOfThreads);
+	//KLog(LInfo, "Found match process name=%wZ, prefix=%wZ, numThread=%d", &ImageFileNameSz, &ProcessPrefixSz, ProcInfo->NumberOfThreads);
 
 	if (ProcInfo->NumberOfThreads < 5)
 		goto cleanup;
@@ -400,7 +400,7 @@ NTSTATUS
 
 	Entry = ProcessEntryCreate(&MonitorGetInstance()->ProcessTable, Process);
 	if (Entry == NULL) {
-		KLog(LInfo, "Process=%p already injected", Process);
+//		KLog(LInfo, "Process=%p already injected", Process);
 		Status = STATUS_SUCCESS;
 		goto cleanup;
 	}
@@ -451,7 +451,7 @@ NTSTATUS
 	do {
 		Status = PsLookupProcessByProcessId(CurrProcInfo->UniqueProcessId, &Process);
 		if (!NT_SUCCESS(Status)) {
-			KLog(LError, "lookup for pid=%p failed error=%x", CurrProcInfo->UniqueProcessId, Status);
+			//KLog(LError, "lookup for pid=%p failed error=%x", CurrProcInfo->UniqueProcessId, Status);
 			goto _next_process;
 		}
 //		KLog(LInfo, "found proc %p by pid=%p", Process, CurrProcInfo->UniqueProcessId);

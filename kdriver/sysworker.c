@@ -124,6 +124,8 @@ NTSTATUS
 		return Status;
 	}
 
+	Worker->Stopping = 0;
+
 	return STATUS_SUCCESS;
 }
 
