@@ -1,5 +1,98 @@
 #include <inc\pe.h>
+#include <inc\ntapiex.h>
 
+#define __SUBCOMPONENT__ "pe"
+#define MODULE_TAG 'pelb'
+
+char* KstdStrRChr(char* pStr, char ch) {
+	if (pStr) {
+		do {
+			pStr++;
+		} while (*pStr);
+		pStr--;
+
+		while (*pStr) {
+			if (*pStr == ch) return pStr;
+			pStr--;
+		}
+	}
+	return NULL;
+}
+
+PVOID
+PeGetModuleExportByName(PCSZ modName, PCSZ exportName)
+{
+	PIMAGE_NT_HEADERS pNtHeader = NULL;
+	PVOID modBase = NULL;
+	PVOID exportAddr = NULL;
+
+	modBase = PeGetModuleBaseAddressByName(modName);
+	if (modBase == NULL) {
+		KLog(LError, "cant resolve modBase by name=%s", modName);
+		return NULL;
+	}
+
+	pNtHeader = RtlImageNtHeader(modBase);
+	if (pNtHeader == NULL) {
+		KLog(LError, "cant get nt header for mod:%s, base=%p\n", modName, modBase);
+		return NULL;
+	}
+
+	exportAddr = PeGetExportEntryByName(modBase, pNtHeader, exportName);
+	if (exportAddr == NULL) {
+		KLog(LError, "cant resolve address of export %s, mod:%s, base=%p\n", exportName, modName, modBase);
+		return NULL;
+	}
+
+	return exportAddr;
+}
+
+PVOID
+PeGetModuleBaseAddressByName(
+IN PCSZ pModuleName
+)
+{
+	ULONG		ulReturn;
+	ULONG		ulCount;
+	ULONG		i;
+	PCHAR		pBuffer = NULL;
+	NTSTATUS	ntStatus;
+	PSYSTEM_MODULE_INFORMATION pModule;
+	CHAR		initBuffer[10];
+	PVOID		pBaseAddress = NULL;
+
+	ntStatus = ZwQuerySystemInformation(SystemModuleInformation, initBuffer, 10, &ulReturn);
+
+	pBuffer = (PCHAR)ExAllocatePoolWithTag(
+		NonPagedPool,
+		ulReturn,
+		MODULE_TAG
+		);
+	if (!pBuffer)
+		return pBaseAddress;
+
+	ntStatus = ZwQuerySystemInformation(SystemModuleInformation, pBuffer, ulReturn, &ulReturn);
+	if (ntStatus == STATUS_SUCCESS)
+	{
+		ulCount = (ULONG)*((ULONG *)pBuffer);
+		pModule = (PSYSTEM_MODULE_INFORMATION)(pBuffer + sizeof(ULONG_PTR));
+		for (i = 0; i<ulCount; i++)
+		{
+			PCHAR pBaseName = KstdStrRChr(pModule->ImageName, '\\');
+			if (!pBaseName) pBaseName = pModule->ImageName;
+			else pBaseName++;
+
+			if (!_stricmp((const char*)pBaseName, pModuleName))
+			{
+				pBaseAddress = pModule->Base;
+				break;
+			}
+			pModule++;
+		}
+	}
+	ExFreePool(pBuffer);
+	return pBaseAddress;
+}
 PVOID
 PeGetPtrFromRVA(
 IN ULONG_PTR			rva,
@@ -12,8 +105,8 @@ IN PUCHAR				imageBase
 
 PVOID
 PeGetImportTableEntry(
-IN PCHAR             pszCalleeModName, // Import module name
-IN PCHAR             strFunctionName,	// Entry name
+IN PCSZ             pszCalleeModName, // Import module name
+IN PCSZ             strFunctionName,	// Entry name
 IN PVOID             pModuleBase,	    // Pointer to the beginning of the image 
 IN PIMAGE_NT_HEADERS pNTHeader         // Pointer to the image NT header	
 )
@@ -172,7 +265,7 @@ OUT PIMAGE_NT_HEADERS *ppPEHeader
 
 PVOID
 PeGetExportEntry(
-IN const char * strFunctionName,
+IN PCSZ strFunctionName,
 IN PVOID   pModuleBase,
 IN ULONG   NumberOfNames,
 IN PULONG  ppFunctions,
@@ -201,7 +294,7 @@ PVOID
 PeGetExportEntryByName(
 IN PIMAGE_DOS_HEADER  pDOSHeader,
 IN PIMAGE_NT_HEADERS  pPEHeader,
-IN const char         *strFunctionName
+IN PCSZ strFunctionName
 )
 {
 	PIMAGE_EXPORT_DIRECTORY pExpDir = NULL;

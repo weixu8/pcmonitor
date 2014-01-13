@@ -97,7 +97,7 @@
  *
  * Comment if your system does not support time functions
  */
-//#define POLARSSL_HAVE_TIME
+#define POLARSSL_HAVE_TIME
 
 /**
  * \def POLARSSL_HAVE_IPV6

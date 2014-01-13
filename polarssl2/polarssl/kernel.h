@@ -15,14 +15,21 @@ typedef
 int
 (*PGEN_RND_BYTES)(unsigned char *output, size_t len);
 
-typedef struct _KERNEL_CALLBACKS {
+typedef struct _SSL_KERNEL_CALLBACKS {
 	PMALLOC malloc;
 	PFREE free;
 	PGEN_RND_BYTES genRndBytes;
-} KERNEL_CALLBACKS, *PKERNEL_CALLBACKS;
+} SSL_KERNEL_CALLBACKS, *PSSL_KERNEL_CALLBACKS;
 
-extern KERNEL_CALLBACKS g_KernelCallbacks;
+extern SSL_KERNEL_CALLBACKS g_KernelCallbacks;
 
-void InitKernelCallbacks(PKERNEL_CALLBACKS Callbacks);
+void SslInitKernelCallbacks(PSSL_KERNEL_CALLBACKS Callbacks);
+
+
+time_t
+get_unix_time();
+
+
+void SslGetLocalTimeFields(PTIME_FIELDS pTimeFields);
 
 #endif

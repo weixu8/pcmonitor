@@ -47,9 +47,6 @@ typedef UINT32 uint32_t;
 #include <inttypes.h>
 #endif
 
-#if defined(POLARSSL_HAVE_TIME)
-#include <time.h>
-#endif
 
 #if defined(POLARSSL_SSL_SERVER_NAME_INDICATION)
 static void ssl_write_hostname_ext( ssl_context *ssl,
@@ -425,7 +422,7 @@ static int ssl_write_client_hello( ssl_context *ssl )
                    buf[4], buf[5] ) );
 
 #if defined(POLARSSL_HAVE_TIME)
-    t = time( NULL );
+    t = get_unix_time();
     *p++ = (unsigned char)( t >> 24 );
     *p++ = (unsigned char)( t >> 16 );
     *p++ = (unsigned char)( t >>  8 );
@@ -885,7 +882,7 @@ static int ssl_parse_server_hello( ssl_context *ssl )
         ssl->state++;
         ssl->handshake->resume = 0;
 #if defined(POLARSSL_HAVE_TIME)
-        ssl->session_negotiate->start = time( NULL );
+        ssl->session_negotiate->start = get_unix_time();
 #endif
         ssl->session_negotiate->ciphersuite = i;
         ssl->session_negotiate->compression = comp;

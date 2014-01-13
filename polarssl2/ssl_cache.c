@@ -58,7 +58,7 @@ int ssl_cache_get( void *data, ssl_session *session )
 {
     int ret = 1;
 #if defined(POLARSSL_HAVE_TIME)
-    time_t t = time( NULL );
+    time_t t = get_unix_time();
 #endif
     ssl_cache_context *cache = (ssl_cache_context *) data;
     ssl_cache_entry *cur, *entry;
@@ -137,7 +137,7 @@ int ssl_cache_set( void *data, const ssl_session *session )
 {
     int ret = 1;
 #if defined(POLARSSL_HAVE_TIME)
-    time_t t = time( NULL ), oldest = 0;
+    time_t t = get_unix_time(), oldest = 0;
     ssl_cache_entry *old = NULL;
 #endif
     ssl_cache_context *cache = (ssl_cache_context *) data;

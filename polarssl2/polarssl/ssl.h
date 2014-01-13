@@ -71,9 +71,6 @@
 #include "zlib.h"
 #endif
 
-#if defined(POLARSSL_HAVE_TIME)
-#include <time.h>
-#endif
 
 /* For convenience below and in programs */
 #if defined(POLARSSL_KEY_EXCHANGE_PSK_ENABLED) ||                           \

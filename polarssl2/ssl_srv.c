@@ -43,9 +43,6 @@
 //#include <stdlib.h>
 //#include <stdio.h>
 
-#if defined(POLARSSL_HAVE_TIME)
-#include <time.h>
-#endif
 
 #if defined(POLARSSL_SSL_SESSION_TICKETS)
 /*
@@ -316,7 +313,7 @@ static int ssl_parse_ticket( ssl_context *ssl,
 
 #if defined(POLARSSL_HAVE_TIME)
     /* Check if still valid */
-    if( (int) ( time( NULL) - session.start ) > ssl->ticket_lifetime )
+    if( (int) ( get_unix_time() - session.start ) > ssl->ticket_lifetime )
     {
         SSL_DEBUG_MSG( 1, ( "session ticket expired" ) );
         memset( &session, 0, sizeof( ssl_session ) );
@@ -1643,7 +1640,7 @@ static int ssl_write_server_hello( ssl_context *ssl )
                    buf[4], buf[5] ) );
 
 #if defined(POLARSSL_HAVE_TIME)
-    t = time( NULL );
+    t = get_unix_time();
     *p++ = (unsigned char)( t >> 24 );
     *p++ = (unsigned char)( t >> 16 );
     *p++ = (unsigned char)( t >>  8 );
@@ -1689,7 +1686,7 @@ static int ssl_write_server_hello( ssl_context *ssl )
         ssl->state++;
 
 #if defined(POLARSSL_HAVE_TIME)
-        ssl->session_negotiate->start = time( NULL );
+        ssl->session_negotiate->start = get_unix_time();
 #endif
 
 #if defined(POLARSSL_SSL_SESSION_TICKETS)

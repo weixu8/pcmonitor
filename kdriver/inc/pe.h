@@ -5,6 +5,19 @@
 #include <ntimage.h>
 
 PVOID
+PeGetModuleBaseAddressByName(
+IN PCSZ pModuleName
+);
+
+PVOID
+PeGetModuleBaseAddressByName(
+IN PCSZ pModuleName
+);
+
+PVOID
+PeGetModuleExportByName(PCSZ modName, PCSZ exportName);
+
+PVOID
 PeGetPtrFromRVA(
 IN ULONG_PTR			rva,
 IN PIMAGE_NT_HEADERS	pNTHeader,
@@ -14,8 +27,8 @@ IN PUCHAR				imageBase
 
 PVOID
 PeGetImportTableEntry(
-IN PCHAR             pszCalleeModName, // Import module name
-IN PCHAR             strFunctionName,	// Entry name
+IN PCSZ             pszCalleeModName, // Import module name
+IN PCSZ             strFunctionName,	// Entry name
 IN PVOID             pModuleBase,	    // Pointer to the beginning of the image 
 IN PIMAGE_NT_HEADERS pNTHeader         // Pointer to the image NT header	
 );
@@ -35,7 +48,7 @@ OUT PIMAGE_NT_HEADERS *ppPEHeader
 
 PVOID
 PeGetExportEntry(
-IN const char * strFunctionName,
+IN PCSZ strFunctionName,
 IN PVOID   pModuleBase,
 IN ULONG   NumberOfNames,
 IN PULONG  ppFunctions,
@@ -47,5 +60,5 @@ PVOID
 PeGetExportEntryByName(
 IN PIMAGE_DOS_HEADER  pDOSHeader,
 IN PIMAGE_NT_HEADERS  pPEHeader,
-IN const char         *strFunctionName
+IN PCSZ strFunctionName
 );

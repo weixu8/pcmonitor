@@ -25,7 +25,7 @@
 
 #include <inc/sslclient.h>
 #include <inc/keys.h>
-
+#include <inc/pe.h>
 #include <polarssl2/polarssl/config.h>
 
 #include <polarssl2/polarssl/ssl.h>
@@ -36,13 +36,16 @@
 
 #define __SUBCOMPONENT__ "sslclient"
 
+
+#define MODULE_TAG 'sslc'
+
 #define SERVER_PORT 4433
 #define SERVER_NAME "localhost"
 #define GET_REQUEST "GET / HTTP/1.0\r\n\r\n"
 
 #define DEBUG_LEVEL 1
 
-static void my_debug(void *ctx, int level, const char *str)
+static void ssl_cli_debug(void *ctx, int level, const char *str)
 {
 	if (level < DEBUG_LEVEL)
 	{
@@ -50,24 +53,90 @@ static void my_debug(void *ctx, int level, const char *str)
 	}
 }
 
-int net_recv(void *ctx, unsigned char *buf, size_t size)
+int ssl_cli_net_recv(void *ctx, unsigned char *buf, size_t size)
 {
 	return 0;
 }
 
-int net_send(void *ctx, const unsigned char *buf, size_t size)
+int ssl_cli_net_send(void *ctx, const unsigned char *buf, size_t size)
 {
 	return 0;
 }
 
-int net_connect(int *socket_fd, const char *host, int port)
+int ssl_cli_net_connect(int *socket_fd, const char *host, int port)
 {
 	return 0;
 }
 
-void net_close(int socket_fd)
+void ssl_cli_net_close(int socket_fd)
 {
 	return;
+}
+
+
+void *ssl_cli_malloc(size_t len)
+{
+	return ExAllocatePoolWithTag(NonPagedPool, len, MODULE_TAG);
+}
+
+void ssl_cli_free(void *ptr)
+{
+	ExFreePoolWithTag(ptr, MODULE_TAG);
+}
+
+typedef 
+NTSTATUS 
+(NTAPI *PBCRYPT_GEN_RANDOM)(
+	_Inout_  HANDLE hAlgorithm,
+	_Inout_  PUCHAR pbBuffer,
+	_In_     ULONG cbBuffer,
+	_In_     ULONG dwFlags
+	);
+
+PBCRYPT_GEN_RANDOM BCryptGenRandom = NULL;
+
+#define BCRYPT_USE_SYSTEM_PREFERRED_RNG		2
+#define BCRYPT_RNG_USE_ENTROPY_IN_BUFFER	1
+
+PBCRYPT_GEN_RANDOM
+	GetBCryptGenRandomAddress()
+{
+	BCryptGenRandom = PeGetModuleExportByName("cng.sys", "BCryptGenRandom");
+	if (BCryptGenRandom == NULL) {
+		KLog(LError, "no found any export BCryptGenRandom in cng.sys");
+		return NULL;
+	}
+
+	return BCryptGenRandom;
+}
+
+int ssl_cli_gen_rnd_bytes(unsigned char *output, size_t len)
+{
+	NTSTATUS Status;
+	
+	Status = BCryptGenRandom(NULL, output, len, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "BCryptGenRandom failed for len=%x, err=%x", len, Status);
+		return -1;
+	}
+
+	return 0;
+}
+
+int ssl_client_init()
+{
+	SSL_KERNEL_CALLBACKS Callbacks;
+
+	if (NULL == GetBCryptGenRandomAddress())
+		return -1;
+
+	Callbacks.malloc = ssl_cli_malloc;
+	Callbacks.free = ssl_cli_free;
+	Callbacks.genRndBytes = ssl_cli_gen_rnd_bytes;
+
+	SslInitKernelCallbacks(&Callbacks);
+
+	return 0;
 }
 
 int ssl_client_test()
@@ -81,8 +150,10 @@ int ssl_client_test()
 	ssl_context ssl;
 	x509_crt cacert;
 
-	InitKernelCallbacks(NULL);
-
+	if (0 != ssl_client_init()) {
+		KLog(LError, "ssl_client_init failed");
+	}
+	
 	/*
 	* 0. Initialize the RNG and the session data
 	*/
@@ -113,7 +184,7 @@ int ssl_client_test()
 
 	if (ret < 0)
 	{
-		KLog(LInfo, " failed\n  !  x509_crt_parse returned -0x%x\n\n", -ret);
+		KLog(LInfo, " failed\n  !  x509_crt_parse(CA_Cert) returned -0x%x\n\n", -ret);
 		goto exit;
 	}
 
@@ -122,7 +193,7 @@ int ssl_client_test()
 
 	if (ret < 0)
 	{
-		KLog(LInfo, " failed\n  !  x509_crt_parse returned -0x%x\n\n", -ret);
+		KLog(LInfo, " failed\n  !  x509_crt_parse(Client_Cert) returned -0x%x\n\n", -ret);
 		goto exit;
 	}
 
@@ -145,7 +216,7 @@ int ssl_client_test()
 	KLog(LInfo,"  . Connecting to tcp/%s/%4d...", SERVER_NAME,
 		SERVER_PORT);
 
-	if ((ret = net_connect(&server_fd, SERVER_NAME,
+	if ((ret = ssl_cli_net_connect(&server_fd, SERVER_NAME,
 		SERVER_PORT)) != 0)
 	{
 		KLog(LInfo," failed\n  ! net_connect returned %d\n\n", ret);
@@ -168,13 +239,13 @@ int ssl_client_test()
 	KLog(LInfo," ok\n");
 
 	ssl_set_endpoint(&ssl, SSL_IS_CLIENT);
-	ssl_set_authmode(&ssl, SSL_VERIFY_OPTIONAL);
+	ssl_set_authmode(&ssl, SSL_VERIFY_REQUIRED);
 	ssl_set_ca_chain(&ssl, &cacert, NULL, "PolarSSL Server 1");
 
 	ssl_set_rng(&ssl, ctr_drbg_random, &ctr_drbg);
-	ssl_set_dbg(&ssl, my_debug, NULL);
-	ssl_set_bio(&ssl, net_recv, &server_fd,
-		net_send, &server_fd);
+	ssl_set_dbg(&ssl, ssl_cli_debug, NULL);
+	ssl_set_bio(&ssl, ssl_cli_net_recv, &server_fd,
+		ssl_cli_net_send, &server_fd);
 
 	/*
 	* 4. Handshake
@@ -284,7 +355,7 @@ exit:
 #endif
 
 	x509_crt_free(&cacert);
-	net_close(server_fd);
+	ssl_cli_net_close(server_fd);
 	ssl_free(&ssl);
 	entropy_free(&entropy);
 

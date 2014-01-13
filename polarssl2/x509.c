@@ -628,16 +628,15 @@ int x509_time_expired( const x509_time *to )
     int hour, min, sec;
 
 #if defined(_WIN32) && !defined(EFIX64) && !defined(EFI32)
-    SYSTEMTIME st;
+	TIME_FIELDS timeFields;
+	SslGetLocalTimeFields(&timeFields);
 
-    GetLocalTime(&st);
-
-    year = st.wYear;
-    mon = st.wMonth;
-    day = st.wDay;
-    hour = st.wHour;
-    min = st.wMinute;
-    sec = st.wSecond;
+	year = timeFields.Year;
+	mon = timeFields.Month;
+	day = timeFields.Day;
+	hour = timeFields.Hour;
+	min = timeFields.Minute;
+	sec = timeFields.Second;
 #else
     struct tm *lt;
     time_t tt;

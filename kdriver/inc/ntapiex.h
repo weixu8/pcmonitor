@@ -76,6 +76,7 @@ typedef enum _SYSTEM_INFORMATION_CLASS {
 	SystemTimeOfDayInformation = 3,
 	SystemProcessInformation = 5,
 	SystemProcessorPerformanceInformation = 8,
+	SystemModuleInformation = 11,
 	SystemInterruptInformation = 23,
 	SystemExceptionInformation = 33,
 	SystemRegistryQuotaInformation = 37,
@@ -187,4 +188,22 @@ ULONG
 PsGetProcessSessionId(
 __in PEPROCESS Process
 );
+
+
+typedef struct _SYSTEM_MODULE_INFORMATION {
+	PVOID Reserved[2];
+	PVOID Base;
+	ULONG Size;
+	ULONG Flags;
+	USHORT Index;
+	USHORT Unknown;
+	USHORT LoadCount;
+	USHORT ModuleNameOffset;
+	CHAR ImageName[256];
+} SYSTEM_MODULE_INFORMATION, *PSYSTEM_MODULE_INFORMATION;
+
+
+NTSYSAPI
+PIMAGE_NT_HEADERS
+RtlImageNtHeader(IN PVOID ModuleAddress);
 
