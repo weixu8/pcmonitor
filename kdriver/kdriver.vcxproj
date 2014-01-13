@@ -153,6 +153,9 @@
     <Link>
       <AdditionalDependencies>$(DDK_LIB_PATH)\netio.lib;..\build\$(Platform)\$(Configuration)\injectstub.lib;..\build\$(Platform)\$(Configuration)\polarssl2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>python.exe gen_keys_file.py</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">
     <Link>
@@ -162,6 +165,9 @@
       <WarningLevel>Level3</WarningLevel>
       <AdditionalIncludeDirectories>..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+    <PreBuildEvent>
+      <Command>python.exe gen_keys_file.py</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">
     <ClCompile>
@@ -172,6 +178,9 @@
     <Link>
       <AdditionalDependencies>$(DDK_LIB_PATH)\netio.lib;..\build\$(Platform)\$(Configuration)\injectstub.lib;..\build\$(Platform)\$(Configuration)\polarssl2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>script.bat</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">
     <ClCompile>
@@ -181,6 +190,9 @@
     <Link>
       <AdditionalDependencies>$(DDK_LIB_PATH)\netio.lib;..\build\$(Platform)\$(Configuration)\injectstub.lib;..\build\$(Platform)\$(Configuration)\polarssl2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>python.exe gen_keys_file.py</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|x64'">
     <ClCompile>
@@ -190,6 +202,9 @@
     <Link>
       <AdditionalDependencies>$(DDK_LIB_PATH)\netio.lib;..\build\$(Platform)\$(Configuration)\injectstub.lib;..\build\$(Platform)\$(Configuration)\polarssl2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>python.exe gen_keys_file.py</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'">
     <ClCompile>
@@ -199,6 +214,9 @@
     <Link>
       <AdditionalDependencies>$(DDK_LIB_PATH)\netio.lib;..\build\$(Platform)\$(Configuration)\injectstub.lib;..\build\$(Platform)\$(Configuration)\polarssl2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>python.exe gen_keys_file.py</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <FilesToPackage Include="$(TargetPath)" />
@@ -206,6 +224,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="driver.c" />
+    <ClCompile Include="keys.c" />
     <ClCompile Include="monitor.c" />
     <ClCompile Include="inject.c" />
     <ClCompile Include="keybrd.c" />
@@ -222,6 +241,7 @@
     <ClInclude Include="h\drvioctl.h" />
     <ClInclude Include="inc\basictypes.h" />
     <ClInclude Include="inc\drvmain.h" />
+    <ClInclude Include="inc\keys.h" />
     <ClInclude Include="inc\monitor.h" />
     <ClInclude Include="inc\inject.h" />
     <ClInclude Include="inc\keybrd.h" />

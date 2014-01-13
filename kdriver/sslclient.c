@@ -24,6 +24,8 @@
 */
 
 #include <inc/sslclient.h>
+#include <inc/keys.h>
+
 #include <polarssl2/polarssl/config.h>
 
 #include <polarssl2/polarssl/ssl.h>
@@ -106,18 +108,34 @@ int ssl_client_test()
 	KLog(LInfo,"  . Loading the CA root certificate ...");
 
 #if defined(POLARSSL_CERTS_C)
-	ret = x509_crt_parse(&cacert, (const unsigned char *)test_ca_list,
-		strlen(test_ca_list));
-#else
-	ret = 1;
-	KLog(LInfo,"POLARSSL_CERTS_C not defined.");
-#endif
+	ret = x509_crt_parse(&cacert, CA_Cert,
+		strlen(CA_Cert));
 
 	if (ret < 0)
 	{
-		KLog(LInfo," failed\n  !  x509_crt_parse returned -0x%x\n\n", -ret);
+		KLog(LInfo, " failed\n  !  x509_crt_parse returned -0x%x\n\n", -ret);
 		goto exit;
 	}
+
+	ret = x509_crt_parse(&cacert, Client_Cert,
+		strlen(Client_Cert));
+
+	if (ret < 0)
+	{
+		KLog(LInfo, " failed\n  !  x509_crt_parse returned -0x%x\n\n", -ret);
+		goto exit;
+	}
+
+#else
+	ret = 1;
+	KLog(LInfo,"POLARSSL_CERTS_C not defined.");
+
+	if (ret < 0)
+	{
+		KLog(LInfo, " failed\n  !  x509_crt_parse returned -0x%x\n\n", -ret);
+		goto exit;
+	}
+#endif
 
 	KLog(LInfo," ok (%d skipped)\n", ret);
 
