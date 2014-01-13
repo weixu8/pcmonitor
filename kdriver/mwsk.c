@@ -441,7 +441,7 @@ cleanup:
 }
 
 NTSTATUS
-    MWskSendAll(PMSOCKET Socket, PVOID Buffer, ULONG Length)
+    MWskSendAll(PMSOCKET Socket, PVOID Buffer, ULONG Length, ULONG *pBytesSent)
 {
     ULONG BytesSent;
     ULONG Offset;
@@ -455,6 +455,8 @@ NTSTATUS
         }
         Offset+= BytesSent;
     }    
+	if (pBytesSent != NULL)
+		*pBytesSent = Offset;
 
     return Status;
 }
@@ -531,7 +533,7 @@ cleanup:
 
 
 NTSTATUS
-    MWskReceiveAll(PMSOCKET Socket, PVOID Buffer, ULONG Length)
+	MWskReceiveAll(PMSOCKET Socket, PVOID Buffer, ULONG Length, PULONG pBytesRcv)
 {
     ULONG BytesRcv;
     ULONG Offset;
@@ -551,6 +553,9 @@ NTSTATUS
         }
         Offset+= BytesRcv;
     }    
+	
+	if (pBytesRcv != NULL)
+		*pBytesRcv = Offset;
 
     return Status;
 }

@@ -64,13 +64,13 @@ NTSTATUS
     MWskClose(PMSOCKET Socket);
 
 NTSTATUS
-    MWskSendAll(PMSOCKET Socket, PVOID Buffer, ULONG Length);
+	MWskSendAll(PMSOCKET Socket, PVOID Buffer, ULONG Length, ULONG *pBytesSent);
     
 VOID
     MWskSocketRelease(PMSOCKET Socket);
 
 NTSTATUS
-    MWskReceiveAll(PMSOCKET Socket, PVOID Buffer, ULONG Length);
+    MWskReceiveAll(PMSOCKET Socket, PVOID Buffer, ULONG Length, ULONG *pBytesRcv);
     
 NTSTATUS
     MWskSockAddrIp4Make(const char *ip, USHORT port, PSOCKADDR_IN sock_addr);

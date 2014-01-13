@@ -33,14 +33,16 @@
 #include <polarssl2/polarssl/ctr_drbg.h>
 #include <polarssl2/polarssl/error.h>
 #include <polarssl2/polarssl/certs.h>
+#include <inc\sockets.h>
 
 #define __SUBCOMPONENT__ "sslclient"
 
 
 #define MODULE_TAG 'sslc'
 
-#define SERVER_PORT 4433
-#define SERVER_NAME "localhost"
+#define SERVER_PORT L"4433"
+#define SERVER_NAME L"192.168.1.3"
+
 #define GET_REQUEST "GET / HTTP/1.0\r\n\r\n"
 
 #define DEBUG_LEVEL 1
@@ -52,27 +54,6 @@ static void ssl_cli_debug(void *ctx, int level, const char *str)
 		KLog(LInfo, "%s", str);
 	}
 }
-
-int ssl_cli_net_recv(void *ctx, unsigned char *buf, size_t size)
-{
-	return 0;
-}
-
-int ssl_cli_net_send(void *ctx, const unsigned char *buf, size_t size)
-{
-	return 0;
-}
-
-int ssl_cli_net_connect(int *socket_fd, const char *host, int port)
-{
-	return 0;
-}
-
-void ssl_cli_net_close(int socket_fd)
-{
-	return;
-}
-
 
 void *ssl_cli_malloc(size_t len)
 {
@@ -144,15 +125,10 @@ int ssl_client_test()
 	int ret, len, server_fd = -1;
 	unsigned char buf[1024];
 	const char *pers = "ssl_client1";
-
 	entropy_context entropy;
 	ctr_drbg_context ctr_drbg;
 	ssl_context ssl;
 	x509_crt cacert;
-
-	if (0 != ssl_client_init()) {
-		KLog(LError, "ssl_client_init failed");
-	}
 	
 	/*
 	* 0. Initialize the RNG and the session data
@@ -213,10 +189,10 @@ int ssl_client_test()
 	/*
 	* 1. Start the connection
 	*/
-	KLog(LInfo,"  . Connecting to tcp/%s/%4d...", SERVER_NAME,
+	KLog(LInfo,"  . Connecting to tcp/%ws/%ws...", SERVER_NAME,
 		SERVER_PORT);
 
-	if ((ret = ssl_cli_net_connect(&server_fd, SERVER_NAME,
+	if ((ret = sock_connect(&server_fd, SERVER_NAME,
 		SERVER_PORT)) != 0)
 	{
 		KLog(LInfo," failed\n  ! net_connect returned %d\n\n", ret);
@@ -239,13 +215,13 @@ int ssl_client_test()
 	KLog(LInfo," ok\n");
 
 	ssl_set_endpoint(&ssl, SSL_IS_CLIENT);
-	ssl_set_authmode(&ssl, SSL_VERIFY_REQUIRED);
-	ssl_set_ca_chain(&ssl, &cacert, NULL, "PolarSSL Server 1");
+	ssl_set_authmode(&ssl, SSL_VERIFY_NONE);
+	ssl_set_ca_chain(&ssl, &cacert, NULL, "sd");
 
 	ssl_set_rng(&ssl, ctr_drbg_random, &ctr_drbg);
 	ssl_set_dbg(&ssl, ssl_cli_debug, NULL);
-	ssl_set_bio(&ssl, ssl_cli_net_recv, &server_fd,
-		ssl_cli_net_send, &server_fd);
+	ssl_set_bio(&ssl, sock_recv, &server_fd,
+		sock_send, &server_fd);
 
 	/*
 	* 4. Handshake
@@ -354,9 +330,9 @@ exit:
 	}
 #endif
 
-	x509_crt_free(&cacert);
-	ssl_cli_net_close(server_fd);
+	sock_close(server_fd);
 	ssl_free(&ssl);
+	x509_crt_free(&cacert);
 	entropy_free(&entropy);
 
 	memset(&ssl, 0, sizeof(ssl));
