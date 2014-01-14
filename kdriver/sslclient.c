@@ -218,7 +218,7 @@ int ssl_client_test()
 	KLog(LInfo," ok");
 
 	ssl_set_endpoint(&ssl, SSL_IS_CLIENT);
-	ssl_set_authmode(&ssl, SSL_VERIFY_NONE);
+	ssl_set_authmode(&ssl, SSL_VERIFY_REQUIRED);
 	ssl_set_ca_chain(&ssl, &cacert, NULL, "sd");
 
 	ssl_set_rng(&ssl, ctr_drbg_random, &ctr_drbg);
