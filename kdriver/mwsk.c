@@ -451,6 +451,7 @@ NTSTATUS
     while (Offset < Length) {
         Status = MWskSend(Socket, 0, (PVOID)((ULONG_PTR)Buffer + Offset), Length - Offset, &BytesSent);
         if (!NT_SUCCESS(Status)) {
+			KLog(LError, "MWskSend failed with err=%x", Status);
             break;
         }
         Offset+= BytesSent;
@@ -547,8 +548,8 @@ NTSTATUS
         }
         
         if (BytesRcv == 0) {
-            KLog(LError, "received 0 bytes");
-            Status = STATUS_UNSUCCESSFUL;
+            KLog(LInfo, "received 0 bytes");
+            Status = STATUS_SUCCESS;
             break;
         }
         Offset+= BytesRcv;

@@ -1,25 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Win8.1 Release|Win32">
-      <Configuration>Win8.1 Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Win8 Release|Win32">
-      <Configuration>Win8 Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Win7 Release|Win32">
       <Configuration>Win7 Release</Configuration>
       <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Win8.1 Release|x64">
-      <Configuration>Win8.1 Release</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Win8 Release|x64">
-      <Configuration>Win8 Release</Configuration>
-      <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Win7 Release|x64">
       <Configuration>Win7 Release</Configuration>
@@ -44,32 +28,8 @@
     <RootNamespace>injectstub</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|Win32'" Label="Configuration">
-    <TargetVersion>WindowsV6.3</TargetVersion>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>WindowsApplicationForDrivers8.1</PlatformToolset>
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'" Label="Configuration">
-    <TargetVersion>Windows8</TargetVersion>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>WindowsApplicationForDrivers8.1</PlatformToolset>
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'" Label="Configuration">
     <TargetVersion>Windows7</TargetVersion>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>WindowsApplicationForDrivers8.1</PlatformToolset>
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|x64'" Label="Configuration">
-    <TargetVersion>WindowsV6.3</TargetVersion>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>WindowsApplicationForDrivers8.1</PlatformToolset>
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'" Label="Configuration">
-    <TargetVersion>Windows8</TargetVersion>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>WindowsApplicationForDrivers8.1</PlatformToolset>
     <ConfigurationType>StaticLibrary</ConfigurationType>
@@ -94,39 +54,7 @@
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <ExcludePath />
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">
-    <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
-    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x64);$(WindowsSDK_ExecutablePath_x64)</ExecutablePath>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
-    <ExcludePath />
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|x64'">
-    <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
-    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x64);$(WindowsSDK_ExecutablePath_x64)</ExecutablePath>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
-    <ExcludePath />
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">
-    <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
-    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath_x86)</ExecutablePath>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
-    <ExcludePath />
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'">
-    <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
-    <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath_x86)</ExecutablePath>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
-    <ExcludePath />
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|Win32'">
     <OutDir>..\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>..\build\tmp\$(Platform)\$(Configuration)\</IntDir>
     <ExecutablePath>$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath_x86)</ExecutablePath>
@@ -139,27 +67,7 @@
       <UseSafeExceptionHandlers>true</UseSafeExceptionHandlers>
     </MASM>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'">
-    <MASM>
-      <UseSafeExceptionHandlers>true</UseSafeExceptionHandlers>
-    </MASM>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|Win32'">
-    <MASM>
-      <UseSafeExceptionHandlers>true</UseSafeExceptionHandlers>
-    </MASM>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">
-    <MASM>
-      <UseSafeExceptionHandlers>true</UseSafeExceptionHandlers>
-    </MASM>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">
-    <MASM>
-      <UseSafeExceptionHandlers>true</UseSafeExceptionHandlers>
-    </MASM>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Release|x64'">
     <MASM>
       <UseSafeExceptionHandlers>true</UseSafeExceptionHandlers>
     </MASM>

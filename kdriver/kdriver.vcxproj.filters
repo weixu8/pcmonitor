@@ -121,5 +121,8 @@
     <ClInclude Include="inc\sockets.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="inc\hallocator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

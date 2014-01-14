@@ -148,7 +148,7 @@ NTSTATUS
 		KLog(LError, "SysWorkerStart failed err=%x", Status);
 		goto start_failed;
 	}
-
+	/*
 	Status = InjectStart(&Monitor->Inject);
 	if (!NT_SUCCESS(Status)) {
 		KLog(LError, "InjectStart failed err=%x", Status);
@@ -160,7 +160,7 @@ NTSTATUS
 		KLog(LError, "KbdStart failed err=%x", Status);
 		goto start_failed;
 	}
-	
+	*/
 	Monitor->State = MONITOR_STATE_STARTED;
 	KeReleaseGuardedMutex(&Monitor->Mutex);
 
@@ -196,9 +196,10 @@ NTSTATUS
 		KeReleaseGuardedMutex(&Monitor->Mutex);
 		return STATUS_TOO_LATE;
 	}
-
+	/*
 	KbdStop(&Monitor->Kbd);
 	InjectStop(&Monitor->Inject);
+	*/
 	SysWorkerStop(&Monitor->RequestWorker);
 	SysWorkerStop(&Monitor->NetWorker);
 
@@ -207,6 +208,7 @@ NTSTATUS
 		Monitor->WskContext = NULL;
 	}
 	ProcessTableStop(&Monitor->ProcessTable);
+	sock_release();
 
 	Monitor->State = MONITOR_STATE_STOPPED;
 	KeReleaseGuardedMutex(&Monitor->Mutex);

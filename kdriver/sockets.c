@@ -21,6 +21,11 @@ int sock_init()
 	return 0;
 }
 
+void sock_release()
+{
+	HTableRelease(&SocketsTable);
+}
+
 int sock_recv(void *ctx, unsigned char *buf, size_t size)
 {
 	int sock_fd = *((int *)ctx);

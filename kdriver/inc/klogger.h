@@ -1,9 +1,9 @@
 #pragma once
 
 #include <inc/drvmain.h>
+#include <inc/hallocator.h>
 
-#define KLOG_MSG_SZ			256
-#define KLOG_BUFFERS_COUNT	256
+#define KLOG_MSG_SZ	488
 
 typedef struct _KLOG_BUFFER {
     LIST_ENTRY	ListEntry;
@@ -11,18 +11,19 @@ typedef struct _KLOG_BUFFER {
     ULONG		Length;
 } KLOG_BUFFER, *PKLOG_BUFFER;
 
+C_ASSERT(sizeof(KLOG_BUFFER) == 512);
 
 typedef struct _KLOG_CONTEXT {
-    BOOLEAN		ThreadStop;
-    HANDLE		ThreadHandle;
-    PVOID		Thread;
-    HANDLE		FileHandle;
-    KLOG_BUFFER	Buffer[KLOG_BUFFERS_COUNT];
-    LIST_ENTRY	FlushQueue;
-    LIST_ENTRY	FreeList;
-    KSPIN_LOCK	Lock;
-    KEVENT		FlushEvent;
-    KDPC		Dpc;
+    volatile BOOLEAN	Stopping;
+    HANDLE				ThreadHandle;
+    PVOID				Thread;
+    HANDLE				FileHandle;
+    LIST_ENTRY			FlushQueue;
+    LIST_ENTRY			FreeList;
+    KSPIN_LOCK			Lock;
+    KEVENT				FlushEvent;
+    KDPC				Dpc;
+	HALLOCATOR			LogBufAllocator;
 } KLOG_CONTEXT, *PKLOG_CONTEXT;
 
 PKLOG_CONTEXT KLogCreate(PUNICODE_STRING FileName);

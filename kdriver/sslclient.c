@@ -41,11 +41,11 @@
 #define MODULE_TAG 'sslc'
 
 #define SERVER_PORT L"4433"
-#define SERVER_NAME L"192.168.1.3"
+#define SERVER_NAME L"10.30.16.93"
 
-#define GET_REQUEST "GET / HTTP/1.0\r\n\r\n"
+#define GET_REQUEST "GET / HTTP/1.0\r\r"
 
-#define DEBUG_LEVEL 1
+#define DEBUG_LEVEL 3
 
 static void ssl_cli_debug(void *ctx, int level, const char *str)
 {
@@ -62,6 +62,9 @@ void *ssl_cli_malloc(size_t len)
 
 void ssl_cli_free(void *ptr)
 {
+	if (ptr == NULL)
+		return;
+
 	ExFreePoolWithTag(ptr, MODULE_TAG);
 }
 
@@ -136,18 +139,18 @@ int ssl_client_test()
 	memset(&ssl, 0, sizeof(ssl_context));
 	x509_crt_init(&cacert);
 
-	KLog(LInfo,"\n  . Seeding the random number generator...");
+	KLog(LInfo,"  . Seeding the random number generator...");
 
 	entropy_init(&entropy);
 	if ((ret = ctr_drbg_init(&ctr_drbg, entropy_func, &entropy,
 		(const unsigned char *)pers,
 		strlen(pers))) != 0)
 	{
-		KLog(LInfo," failed\n  ! ctr_drbg_init returned %d\n", ret);
+		KLog(LInfo," failed  ! ctr_drbg_init returned %d", ret);
 		goto exit;
 	}
 
-	KLog(LInfo," ok\n");
+	KLog(LInfo," ok");
 
 	/*
 	* 0. Initialize certificates
@@ -160,7 +163,7 @@ int ssl_client_test()
 
 	if (ret < 0)
 	{
-		KLog(LInfo, " failed\n  !  x509_crt_parse(CA_Cert) returned -0x%x\n\n", -ret);
+		KLog(LInfo, " failed  !  x509_crt_parse(CA_Cert) returned -0x%x", -ret);
 		goto exit;
 	}
 
@@ -169,7 +172,7 @@ int ssl_client_test()
 
 	if (ret < 0)
 	{
-		KLog(LInfo, " failed\n  !  x509_crt_parse(Client_Cert) returned -0x%x\n\n", -ret);
+		KLog(LInfo, " failed  !  x509_crt_parse(Client_Cert) returned -0x%x", -ret);
 		goto exit;
 	}
 
@@ -179,12 +182,12 @@ int ssl_client_test()
 
 	if (ret < 0)
 	{
-		KLog(LInfo, " failed\n  !  x509_crt_parse returned -0x%x\n\n", -ret);
+		KLog(LInfo, " failed  !  x509_crt_parse returned -0x%x", -ret);
 		goto exit;
 	}
 #endif
 
-	KLog(LInfo," ok (%d skipped)\n", ret);
+	KLog(LInfo," ok (%d skipped)", ret);
 
 	/*
 	* 1. Start the connection
@@ -195,11 +198,11 @@ int ssl_client_test()
 	if ((ret = sock_connect(&server_fd, SERVER_NAME,
 		SERVER_PORT)) != 0)
 	{
-		KLog(LInfo," failed\n  ! net_connect returned %d\n\n", ret);
+		KLog(LInfo," failed  ! net_connect returned %d", ret);
 		goto exit;
 	}
 
-	KLog(LInfo," ok\n");
+	KLog(LInfo," ok");
 
 	/*
 	* 2. Setup stuff
@@ -208,11 +211,11 @@ int ssl_client_test()
 
 	if ((ret = ssl_init(&ssl)) != 0)
 	{
-		KLog(LInfo," failed\n  ! ssl_init returned %d\n\n", ret);
+		KLog(LInfo," failed  ! ssl_init returned %d", ret);
 		goto exit;
 	}
 
-	KLog(LInfo," ok\n");
+	KLog(LInfo," ok");
 
 	ssl_set_endpoint(&ssl, SSL_IS_CLIENT);
 	ssl_set_authmode(&ssl, SSL_VERIFY_NONE);
@@ -232,12 +235,12 @@ int ssl_client_test()
 	{
 		if (ret != POLARSSL_ERR_NET_WANT_READ && ret != POLARSSL_ERR_NET_WANT_WRITE)
 		{
-			KLog(LInfo," failed\n  ! ssl_handshake returned -0x%x\n\n", -ret);
+			KLog(LInfo," failed  ! ssl_handshake returned -0x%x", -ret);
 			goto exit;
 		}
 	}
 
-	KLog(LInfo," ok\n");
+	KLog(LInfo," ok");
 
 	/*
 	* 5. Verify the server certificate
@@ -246,24 +249,24 @@ int ssl_client_test()
 
 	if ((ret = ssl_get_verify_result(&ssl)) != 0)
 	{
-		KLog(LInfo," failed\n");
+		KLog(LError," failed");
 
 		if ((ret & BADCERT_EXPIRED) != 0)
-			KLog(LInfo,"  ! server certificate has expired\n");
+			KLog(LError, "  ! server certificate has expired");
 
 		if ((ret & BADCERT_REVOKED) != 0)
-			KLog(LInfo,"  ! server certificate has been revoked\n");
+			KLog(LError, "  ! server certificate has been revoked");
 
 		if ((ret & BADCERT_CN_MISMATCH) != 0)
-			KLog(LInfo,"  ! CN mismatch (expected CN=%s)\n", "PolarSSL Server 1");
+			KLog(LError, "  ! CN mismatch (expected CN=%s)", "PolarSSL Server 1");
 
 		if ((ret & BADCERT_NOT_TRUSTED) != 0)
-			KLog(LInfo,"  ! self-signed or not signed by a trusted CA\n");
+			KLog(LError, "  ! self-signed or not signed by a trusted CA");
 
-		KLog(LInfo,"\n");
+		KLog(LInfo,"");
 	}
 	else
-		KLog(LInfo," ok\n");
+		KLog(LInfo," ok");
 
 	/*
 	* 3. Write the GET request
@@ -271,18 +274,18 @@ int ssl_client_test()
 	KLog(LInfo,"  > Write to server:");
 	
 
-	len = 0;
+	len = sprintf((char *)buf, GET_REQUEST);
 	while ((ret = ssl_write(&ssl, buf, len)) <= 0)
 	{
 		if (ret != POLARSSL_ERR_NET_WANT_READ && ret != POLARSSL_ERR_NET_WANT_WRITE)
 		{
-			KLog(LInfo," failed\n  ! ssl_write returned %d\n\n", ret);
+			KLog(LInfo," failed  ! ssl_write returned %d", ret);
 			goto exit;
 		}
 	}
 
 	len = ret;
-	KLog(LInfo," %d bytes written\n\n%s", len, (char *)buf);
+	KLog(LInfo," %d bytes written%s", len, (char *)buf);
 
 	/*
 	* 7. Read the HTTP response
@@ -303,18 +306,18 @@ int ssl_client_test()
 
 		if (ret < 0)
 		{
-			KLog(LInfo,"failed\n  ! ssl_read returned %d\n\n", ret);
+			KLog(LInfo,"failed  ! ssl_read returned %d", ret);
 			break;
 		}
 
 		if (ret == 0)
 		{
-			KLog(LInfo,"\n\nEOF\n\n");
+			KLog(LInfo,"EOF");
 			break;
 		}
 
 		len = ret;
-		KLog(LInfo," %d bytes read\n\n%s", len, (char *)buf);
+		KLog(LInfo," %d bytes read%s", len, (char *)buf);
 	} while (1);
 
 	ssl_close_notify(&ssl);
@@ -326,7 +329,7 @@ exit:
 	{
 		char error_buf[100];
 		polarssl_strerror(ret, error_buf, 100);
-		KLog(LInfo,"Last error was: %d - %s\n\n", ret, error_buf);
+		KLog(LInfo,"Last error was: %d - %s", ret, error_buf);
 	}
 #endif
 

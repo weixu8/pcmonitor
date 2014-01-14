@@ -1,6 +1,9 @@
 #include <inc/klogger.h>
+
 #include <stdio.h>
 #include <stdarg.h>
+
+#define MODULE_TAG 'klog'
 
 PKLOG_CONTEXT g_Log = NULL;
 
@@ -11,27 +14,13 @@ VOID KLoggerThreadRoutine(PVOID Context);
 
 PKLOG_BUFFER KLogAllocBuffer(PKLOG_CONTEXT Log)
 {
-    KIRQL Irql;
-    PLIST_ENTRY ListEntry;
-    PKLOG_BUFFER KLogBuffer = NULL;
-
-    KeAcquireSpinLock(&Log->Lock, &Irql);
-    if (!IsListEmpty(&Log->FreeList)) {
-        ListEntry = RemoveHeadList(&Log->FreeList);
-        KLogBuffer = CONTAINING_RECORD(ListEntry, KLOG_BUFFER, ListEntry);
-    }
-    KeReleaseSpinLock(&Log->Lock, Irql);
-    return KLogBuffer;
+	return (PKLOG_BUFFER)HAllocatorAlloc(&Log->LogBufAllocator);
 }
 
 VOID KLogFreeBuffer(PKLOG_CONTEXT Log, PKLOG_BUFFER KLogBuffer)
 {
-    KIRQL Irql;
-    KeAcquireSpinLock(&Log->Lock, &Irql);
-    InsertHeadList(&Log->FreeList, &KLogBuffer->ListEntry);
-    KeReleaseSpinLock(&Log->Lock, Irql);
+	HAllocatorFree(&Log->LogBufAllocator, KLogBuffer);
 }
-
 
 VOID KLogDpc(KDPC *Dpc, PVOID DeferredContext, PVOID SystemArgument1, PVOID SystemArgument2)
 {
@@ -50,20 +39,13 @@ VOID KLogBuffersInit(PKLOG_CONTEXT Log)
     KeInitializeSpinLock(&Log->Lock);
 
     KeInitializeEvent(&Log->FlushEvent, SynchronizationEvent, FALSE);
-
-    KeAcquireSpinLock(&Log->Lock, &Irql);
-    for (Index = 0; Index < KLOG_BUFFERS_COUNT; Index++) 
-        InsertHeadList(&Log->FreeList, &Log->Buffer[Index].ListEntry);
-    KeReleaseSpinLock(&Log->Lock, Irql);
-
     KeInitializeDpc(&Log->Dpc, KLogDpc, Log);
-    Log->ThreadStop = FALSE;
 
+	HAllocatorInit(&Log->LogBufAllocator, sizeof(KLOG_BUFFER), 200, 40*PAGE_SIZE, MODULE_TAG);
 }
 
 VOID KLogThreadStop(PKLOG_CONTEXT Log)
 {
-    Log->ThreadStop = TRUE;
     KeSetEvent(&Log->FlushEvent, 0, FALSE);
 
     if (Log->ThreadHandle != NULL) {
@@ -171,7 +153,10 @@ VOID KLogFileClose(PKLOG_CONTEXT Log)
 
 VOID KLogRelease(PKLOG_CONTEXT Log)
 {
+	Log->Stopping = TRUE;
+	KeFlushQueuedDpcs();
     KLogThreadStop(Log);
+	HAllocatorRelease(&Log->LogBufAllocator);
     KLogFileClose(Log);
     ExFreePool(Log);
 }
@@ -259,6 +244,9 @@ VOID KLogCtx2(PKLOG_CONTEXT Log, int level, PCHAR component, PCHAR file, ULONG l
     int left;
     int res = 0;
     TIME_FIELDS TimeFields;
+	
+	if (Log->Stopping)
+		return;
 
     Buffer = KLogAllocBuffer(Log);
     if (Buffer == NULL) {
@@ -292,7 +280,7 @@ VOID KLogCtx2(PKLOG_CONTEXT Log, int level, PCHAR component, PCHAR file, ULONG l
 
     res = WriteMsg2(&pos,&left, fmt, args);
     if (res == -2) {
-        WriteMsg(&pos, &left, "LOG INVALID FMT:%s\n", fmt);
+        WriteMsg(&pos, &left, "LOG INVALID FMT OR OVERFLOW:%s\n", fmt);
     } else {
         WriteMsg(&pos,&left, "\n");
     }
@@ -330,24 +318,21 @@ VOID KLogCtx(PKLOG_CONTEXT Log, int level, PCHAR component, PCHAR file, ULONG li
     va_end(args);
 }
 
-
-
 VOID KLoggerThreadRoutine(PVOID Context)
 {
     PKLOG_CONTEXT Log = (PKLOG_CONTEXT)Context;
-    NTSTATUS Status;
     KIRQL Irql;
     LIST_ENTRY FlushQueue;
     PKLOG_BUFFER KLogBuffer;
     PLIST_ENTRY ListEntry;
+	LARGE_INTEGER Timeout;
 
     LOG_DPRINT("Log thread started %p\n", PsGetCurrentThread());
 
-    while (TRUE) {
-        Status = KeWaitForSingleObject(&Log->FlushEvent, Executive, KernelMode, FALSE, NULL);
-        if (!NT_SUCCESS(Status)) {
-            LOG_DPRINT("KeWaitForSingleObject failed with err %x\n", Status);
-        }
+	Timeout.QuadPart = -20 * 1000 * 10;//20ms
+
+	while (!Log->Stopping) {
+		KeWaitForSingleObject(&Log->FlushEvent, Executive, KernelMode, FALSE, &Timeout);
         LOG_DPRINT("Log thread %p started processing log\n", PsGetCurrentThread());
 
         InitializeListHead(&FlushQueue);
@@ -366,9 +351,6 @@ VOID KLoggerThreadRoutine(PVOID Context)
             KLogFileWrite(Log, KLogBuffer->Msg, KLogBuffer->Length);
             KLogFreeBuffer(Log, KLogBuffer);
         }
-
-        if (Log->ThreadStop)
-            break;
     }
 
     LOG_DPRINT("Log thread stopped %p\n", PsGetCurrentThread());
