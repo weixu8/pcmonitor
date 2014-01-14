@@ -45,7 +45,7 @@
 
 #define GET_REQUEST "GET / HTTP/1.0\r\r"
 
-#define DEBUG_LEVEL 3
+#define DEBUG_LEVEL 1
 
 static void ssl_cli_debug(void *ctx, int level, const char *str)
 {

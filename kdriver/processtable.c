@@ -230,7 +230,7 @@ VOID
 	WrkItem = SysWorkerAddWorkRef(&Table->Worker, ProcessTableRemoveAllWorker, Table);
 	if (WrkItem != NULL) {
 		KeWaitForSingleObject(&WrkItem->CompletionEvent, Executive, KernelMode, FALSE, NULL);
-		SysWrkItemDeref(WrkItem);
+		SYS_WRK_ITEM_DEREF(WrkItem)
 	}
 
 	SysWorkerStop(&Table->Worker);

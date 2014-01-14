@@ -7,13 +7,13 @@
 #define SYS_WRK_ITEM_TAG 'mont'
 
 VOID
-	SysWrkItemRef(PSYS_WRK_ITEM WrkItem)
+	SysWrkItemRef_(PSYS_WRK_ITEM WrkItem)
 {
 	InterlockedIncrement(&WrkItem->RefCount);
 }
 
 VOID
-	SysWrkItemDeref(PSYS_WRK_ITEM WrkItem)
+	SysWrkItemDeref_(PSYS_WRK_ITEM WrkItem)
 {
 	LONG RefCount = -1;
 	RefCount = InterlockedDecrement(&WrkItem->RefCount);
@@ -28,7 +28,7 @@ VOID
 PSYS_WRK_ITEM
 	SysWorkerAddWorkRef(PSYSWORKER Worker, PSYS_WRK_ROUTINE Routine, PVOID Context)
 {
-	PSYS_WRK_ITEM WrkItem;
+	PSYS_WRK_ITEM WrkItem = NULL;
 	KIRQL Irql;
 
 	if (Worker->Stopping)
@@ -41,14 +41,14 @@ PSYS_WRK_ITEM
 	}
 
 	RtlZeroMemory(WrkItem, sizeof(SYS_WRK_ITEM));
-	WrkItem->RefCount = 1;
+	SYS_WRK_ITEM_REF(WrkItem)
 	WrkItem->Routine = Routine;
 	WrkItem->Context = Context;
 
 	KeInitializeEvent(&WrkItem->CompletionEvent, NotificationEvent, FALSE);
 	
 	KeAcquireSpinLock(&Worker->Lock, &Irql);
-	SysWrkItemRef(WrkItem);
+	SYS_WRK_ITEM_REF(WrkItem)
 	InsertTailList(&Worker->WrkItemList, &WrkItem->ListEntry);
 	KeReleaseSpinLock(&Worker->Lock, Irql);
 
@@ -62,7 +62,7 @@ VOID
 {
 	PSYS_WRK_ITEM WrkItem = SysWorkerAddWorkRef(Worker, Routine, Context);
 	if (WrkItem != NULL) {
-		SysWrkItemDeref(WrkItem);
+		SYS_WRK_ITEM_DEREF(WrkItem)
 	}
 }
 
@@ -73,7 +73,7 @@ PSYS_WRK_ITEM
 	KIRQL Irql;
 
 	KeAcquireSpinLock(&Worker->Lock, &Irql);
-	while (!IsListEmpty(&Worker->WrkItemList)) {
+	if (!IsListEmpty(&Worker->WrkItemList)) {
 		PLIST_ENTRY ListEntry;
 		ListEntry = RemoveHeadList(&Worker->WrkItemList);
 		WrkItem = CONTAINING_RECORD(ListEntry, SYS_WRK_ITEM, ListEntry);
@@ -93,7 +93,7 @@ VOID
 	while ((!Worker->Stopping) && ((WrkItem = SysWorkerGetWkItemToProcess(Worker)) != NULL)) {
 		WrkItem->Status = WrkItem->Routine(WrkItem->Context);
 		KeSetEvent(&WrkItem->CompletionEvent, 0, FALSE);
-		SysWrkItemDeref(WrkItem);
+		SYS_WRK_ITEM_DEREF(WrkItem)
 	}
 	
 	KeAcquireSpinLock(&Worker->Lock, &Irql);
@@ -137,6 +137,6 @@ VOID
 	SysThreadStop(&Worker->Thread);
 
 	while ((WrkItem = SysWorkerGetWkItemToProcess(Worker)) != NULL) {
-		SysWrkItemDeref(WrkItem);
+		SYS_WRK_ITEM_DEREF(WrkItem)
 	}
 }

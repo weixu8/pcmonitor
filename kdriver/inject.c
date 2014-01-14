@@ -556,7 +556,7 @@ VOID
 	WrkItem = SysWorkerAddWorkRef(&Inject->Worker, InjectEmptyWork, Inject);
 	if (WrkItem != NULL) {
 		KeWaitForSingleObject(&WrkItem->CompletionEvent, Executive, KernelMode, FALSE, NULL);
-		SysWrkItemDeref(WrkItem);
+		SYS_WRK_ITEM_DEREF(WrkItem)
 	}
 
 	SysWorkerStop(&Inject->Worker);
