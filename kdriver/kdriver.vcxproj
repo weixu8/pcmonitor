@@ -128,6 +128,7 @@
     <ClInclude Include="inc\sockets.h" />
     <ClInclude Include="inc\srequest.h" />
     <ClInclude Include="inc\srequest_status.h" />
+    <ClInclude Include="inc\srequest_type.h" />
     <ClInclude Include="inc\sslclient.h" />
     <ClInclude Include="inc\servercon.h" />
     <ClInclude Include="inc\string.h" />

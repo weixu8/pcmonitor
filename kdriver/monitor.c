@@ -97,6 +97,25 @@ VOID
 }
 
 NTSTATUS
+	MonitorCallServerTestWorker(PVOID Context)
+{
+	PSREQUEST request = SRequestAlloc(SREQ_STATUS_SUCCESS, 0);
+	PSREQUEST response = NULL;
+	if (request == NULL) {
+		return STATUS_NO_MEMORY;
+	}
+
+	request->type = SREQ_TYPE_PING_PONG;
+	response = MonitorCallServer(request);
+	if (response == NULL) {
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	KLog(LInfo, "response status=%x, type=%x, dataSize=%x", response->status, response->type, response->dataSize);
+	return STATUS_SUCCESS;
+}
+
+NTSTATUS
     MonitorStartInternal(PMONITOR Monitor)
 {
     NTSTATUS Status;
@@ -142,6 +161,8 @@ NTSTATUS
 		KLog(LError, "SysWorkerStart failed err=%x", Status);
 		goto start_failed;
 	}
+	SysWorkerAddWork(&Monitor->RequestWorker, MonitorCallServerTestWorker, NULL);
+
 	/*
 	Status = InjectStart(&Monitor->Inject);
 	if (!NT_SUCCESS(Status)) {
@@ -416,4 +437,10 @@ cleanup:
 	openWinsta->Process = NULL;
 
 	return Status;
+}
+
+PSREQUEST
+	MonitorCallServer(PSREQUEST Request)
+{
+	return ServerConPoolSendReceive(&MonitorGetInstance()->ConPool, Request);
 }
