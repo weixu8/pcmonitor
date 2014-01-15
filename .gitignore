@@ -10,6 +10,9 @@
 *.sys
 *.lib
 *.pdb
+!server/libs/*.jar
+!server/build/win/x64/*.exe
+!server/build/win/x32/*.exe
 
 # Packages #
 ############
