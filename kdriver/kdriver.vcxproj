@@ -101,7 +101,8 @@
     <ClCompile Include="pe.c" />
     <ClCompile Include="processtable.c" />
     <ClCompile Include="sockets.c" />
-    <ClCompile Include="sslclient.c" />
+    <ClCompile Include="srequest.c" />
+    <ClCompile Include="servercon.c" />
     <ClCompile Include="string.c" />
     <ClCompile Include="systhread.c" />
     <ClCompile Include="sysworker.c" />
@@ -110,6 +111,7 @@
     <ClInclude Include="h\drvioctl.h" />
     <ClInclude Include="inc\basictypes.h" />
     <ClInclude Include="inc\drvmain.h" />
+    <ClInclude Include="inc\endian.h" />
     <ClInclude Include="inc\hallocator.h" />
     <ClInclude Include="inc\htable.h" />
     <ClInclude Include="inc\keys.h" />
@@ -124,7 +126,10 @@
     <ClInclude Include="inc\processtable.h" />
     <ClInclude Include="inc\shrlock.h" />
     <ClInclude Include="inc\sockets.h" />
+    <ClInclude Include="inc\srequest.h" />
+    <ClInclude Include="inc\srequest_status.h" />
     <ClInclude Include="inc\sslclient.h" />
+    <ClInclude Include="inc\servercon.h" />
     <ClInclude Include="inc\string.h" />
     <ClInclude Include="inc\systhread.h" />
     <ClInclude Include="inc\sysworker.h" />

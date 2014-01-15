@@ -39,8 +39,11 @@ VOID
 VOID
 	SysWorkerStop(PSYSWORKER Worker);
 
+NTSTATUS
+	SysWorkerInitStart(PSYSWORKER Worker);
+
 PSYS_WRK_ITEM
-SysWorkerAddWorkRef(PSYSWORKER Worker, PSYS_WRK_ROUTINE Routine, PVOID Context);
+	SysWorkerAddWorkRef(PSYSWORKER Worker, PSYS_WRK_ROUTINE Routine, PVOID Context);
 
 #define SYS_WRK_ITEM_REF(WrkItem)										\
 {																		\

@@ -35,6 +35,7 @@ int HTableCreateHandle(PHTABLE HTable, PVOID Object)
 		if (HTable->Objects[Index] == NULL) {
 			HTable->Objects[Index] = Object;
 			Handle = (int)Index;
+			break;
 		}
 	}
 	KeReleaseGuardedMutex(&HTable->Lock);

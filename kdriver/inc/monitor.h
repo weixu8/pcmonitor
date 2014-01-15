@@ -10,6 +10,7 @@
 #include <inc/pallocator.h>
 #include <h/drvioctl.h>
 #include <inc/processtable.h>
+#include <inc/servercon.h>
 
 #define MONITOR_STATE_STOPPED 1
 #define MONITOR_STATE_STARTED 2
@@ -24,6 +25,7 @@ typedef struct _MONITOR {
 	INJECT_BLOCK	Inject;
 	PROCESS_TABLE	ProcessTable;
 	KBD_CONTEXT		Kbd;
+	SERVER_CON_POOL ConPool;
 } MONITOR, *PMONITOR;
 
 VOID

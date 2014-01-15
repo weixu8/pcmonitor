@@ -44,9 +44,6 @@
     <ClCompile Include="processtable.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="sslclient.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="keys.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -54,6 +51,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="htable.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="servercon.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="srequest.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -122,6 +125,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="inc\hallocator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\servercon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\srequest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\srequest_status.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\endian.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

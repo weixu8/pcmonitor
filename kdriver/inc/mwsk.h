@@ -1,6 +1,7 @@
 #pragma once
 
 #include <inc/drvmain.h>
+#include <inc/endian.h>
 
 // Driver entry routine
 NTSTATUS
@@ -89,7 +90,4 @@ NTSTATUS
         __in_opt PADDRINFOEXW Hints,
         PSOCKADDR_IN ResolvedAddress
     );
-#define htons(x)    _byteswap_ushort((USHORT)(x))
-#define ntohs(x)    _byteswap_ushort((USHORT)(x))
-#define htonl(x)    _byteswap_ulong((ULONG)(x))
-#define ntohl(x)    _byteswap_ulong((ULONG)(x))
+

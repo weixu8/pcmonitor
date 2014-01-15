@@ -115,6 +115,13 @@ VOID
 }
 
 NTSTATUS
+	SysWorkerInitStart(PSYSWORKER Worker)
+{
+	SysWorkerInit(Worker);
+	return SysWorkerStart(Worker);
+}
+
+NTSTATUS
 	SysWorkerStart(PSYSWORKER Worker)
 {
 	NTSTATUS Status;

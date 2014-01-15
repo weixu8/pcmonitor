@@ -96,13 +96,6 @@ VOID
 	Monitor->State = MONITOR_STATE_STOPPED;
 }
 
-NTSTATUS 
-	ssl_client_test_Worker(PVOID Context)
-{
-	ssl_client_test();
-	return STATUS_SUCCESS;
-}
-
 NTSTATUS
     MonitorStartInternal(PMONITOR Monitor)
 {
@@ -120,8 +113,9 @@ NTSTATUS
 		goto start_failed;
 	}
 
-	if (0 != ssl_client_init()) {
-		KLog(LError, "ssl_client_init failed");
+	Status = ServerConPoolStart(&Monitor->ConPool, 2);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "ServerConPoolStart failed err=%x", Status);
 		goto start_failed;
 	}
 
@@ -164,8 +158,6 @@ NTSTATUS
 	Monitor->State = MONITOR_STATE_STARTED;
 	KeReleaseGuardedMutex(&Monitor->Mutex);
 
-	SysWorkerAddWork(&Monitor->RequestWorker, ssl_client_test_Worker, NULL);
-
 	return STATUS_SUCCESS;
 
 start_failed:
@@ -173,13 +165,17 @@ start_failed:
 	InjectStop(&Monitor->Inject);
 	SysWorkerStop(&Monitor->RequestWorker);
 	SysWorkerStop(&Monitor->NetWorker);
-	
+
+	ProcessTableStop(&Monitor->ProcessTable);
+
+	ServerConPoolStop(&Monitor->ConPool);
+	sock_release();
+
 	if (Monitor->WskContext != NULL) {
 		MWskRelease(Monitor->WskContext);
 		Monitor->WskContext = NULL;
 	}
-	ProcessTableStop(&Monitor->ProcessTable);
-
+	
 	Monitor->State = MONITOR_STATE_STOPPED;
 
 	KeReleaseGuardedMutex(&Monitor->Mutex);
@@ -203,12 +199,14 @@ NTSTATUS
 	SysWorkerStop(&Monitor->RequestWorker);
 	SysWorkerStop(&Monitor->NetWorker);
 
+	ProcessTableStop(&Monitor->ProcessTable);
+	ServerConPoolStop(&Monitor->ConPool);
+	sock_release();
+
 	if (Monitor->WskContext != NULL) {
 		MWskRelease(Monitor->WskContext);
 		Monitor->WskContext = NULL;
 	}
-	ProcessTableStop(&Monitor->ProcessTable);
-	sock_release();
 
 	Monitor->State = MONITOR_STATE_STOPPED;
 	KeReleaseGuardedMutex(&Monitor->Mutex);
