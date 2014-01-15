@@ -48,3 +48,6 @@ VOID MonitorSendKbdBuf(PMONITOR Monitor, PVOID BuffEntry);
 
 PMONITOR
 	MonitorGetInstance(VOID);
+
+PSREQUEST
+	MonitorCallServer(PSREQUEST Request);

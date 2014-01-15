@@ -1,6 +1,8 @@
 #pragma once
 #include <inc/drvmain.h>
 #include <inc/srequest_status.h>
+#include <inc/srequest_type.h>
+
 #include <inc/endian.h>
 
 #pragma pack(push, 1)

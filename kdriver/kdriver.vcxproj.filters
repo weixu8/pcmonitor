@@ -139,5 +139,8 @@
     <ClInclude Include="inc\endian.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="inc\srequest_type.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
