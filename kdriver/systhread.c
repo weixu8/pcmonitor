@@ -7,16 +7,19 @@ VOID
 {
     PSYSTHREAD ThreadCtx = (PSYSTHREAD)Context;
     NTSTATUS Status;
-    
+	BOOLEAN bCallMeAgain = FALSE;
+
     KLog(LInfo, "Sys thread started %p", PsGetCurrentThread());
 
     while (TRUE) {
-        Status = KeWaitForSingleObject(&ThreadCtx->Event, Executive, KernelMode, FALSE, NULL);
-        if (!NT_SUCCESS(Status)) {
-            KLog(LError, "KeWaitForSingleObject failed with err %x", Status);
-        }
+		if (!bCallMeAgain) {
+			Status = KeWaitForSingleObject(&ThreadCtx->Event, Executive, KernelMode, FALSE, NULL);
+			if (!NT_SUCCESS(Status)) {
+				KLog(LError, "KeWaitForSingleObject failed with err %x", Status);
+			}
+		}
 
-		ThreadCtx->Routine(ThreadCtx->Context);
+		bCallMeAgain = ThreadCtx->Routine(ThreadCtx->Context);
         if (ThreadCtx->ThreadStop)
             break;
     }

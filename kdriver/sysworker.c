@@ -82,12 +82,12 @@ PSYS_WRK_ITEM
 	return WrkItem;
 }
 
-VOID
+BOOLEAN
 	SysWorkerThreadRoutine(PVOID Context)
 {
 	PSYSWORKER Worker = (PSYSWORKER)Context;
 	PSYS_WRK_ITEM WrkItem;
-	BOOLEAN bSignalThread = FALSE;
+	BOOLEAN bCallMeAgain = FALSE;
 	KIRQL Irql;
 
 	while ((!Worker->Stopping) && ((WrkItem = SysWorkerGetWkItemToProcess(Worker)) != NULL)) {
@@ -98,11 +98,10 @@ VOID
 	
 	KeAcquireSpinLock(&Worker->Lock, &Irql);
 	if (!IsListEmpty(&Worker->WrkItemList))
-		bSignalThread = TRUE;
+		bCallMeAgain = TRUE;
 	KeReleaseSpinLock(&Worker->Lock, Irql);
 	
-	if (bSignalThread)
-		SysThreadSignal(&Worker->Thread);
+	return bCallMeAgain;
 }
 
 VOID

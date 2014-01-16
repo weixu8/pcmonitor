@@ -508,45 +508,24 @@ unlock:
 	return Con;
 }
 
-PSREQUEST
-	ServerConPoolSendReceive(PSERVER_CON_POOL ConPool, PSREQUEST requestParam)
+
+typedef struct _CON_SEND_RECV_DATA {
+	PSERVER_CON Con;
+	PSREQUEST	requestParam;
+	PSREQUEST	response;
+} CON_SEND_RECV_DATA, *PCON_SEND_RECV_DATA;
+
+NTSTATUS
+	ServerConSendReceive(PCON_SEND_RECV_DATA Ctx)
 {
-	PSERVER_CON Con = NULL;
-	int ret = -1;
-	SREQUEST_HEADER header, nheader;
 	ULONG reqSize = 0;
-	PSREQUEST response = NULL, request = NULL;
+	int ret = -1;
+	PSERVER_CON Con = Ctx->Con;
 	int status = SREQ_STATUS_ERROR;
-	LARGE_INTEGER Timeout;
+	SREQUEST_HEADER header, nheader;
+	PSREQUEST response = NULL, request = NULL;
 
-	if (!SRequestValid(requestParam)) {
-		KLog(LError, "SREQ_STATUS_BAD_REQUEST");
-		status = SREQ_STATUS_BAD_REQUEST;
-		goto failed;
-	}
-
-	if (ConPool->Stopping) {
-		KLog(LError, "SREQ_STATUS_CLIENT_SHUTDOWN");
-		status = SREQ_STATUS_CLIENT_SHUTDOWN;
-		goto failed;
-	}
-
-	Timeout.QuadPart = -3000 * 1000 * 10; // wait 3 secs
-	KeWaitForSingleObject(&ConPool->ActiveEvent, Executive, KernelMode, FALSE, &Timeout);
-	if (ConPool->Stopping) {
-		KLog(LError, "SREQ_STATUS_CLIENT_SHUTDOWN");
-		status = SREQ_STATUS_CLIENT_SHUTDOWN;
-		goto failed;
-	}
-
-	Con = ServerConPoolSelectCon(ConPool);
-	if (Con == NULL) {
-		KLog(LError, "ServerConPoolSelectCon failed");
-		status = SREQ_STATUS_NO_CON;
-		goto failed;
-	}
-
-	request = SRequestClone(requestParam);
+	request = SRequestClone(Ctx->requestParam);
 	if (request == NULL) {
 		KLog(LError, "SRequestClone failed");
 		status = SREQ_STATUS_NO_MEM;
@@ -554,7 +533,6 @@ PSREQUEST
 	}
 
 	reqSize = SRequestMemSize(&request->header);
-	
 	SRequestHtoN(request);
 	ret = ServerConWrite(Con, (const unsigned char *)request, reqSize);
 	if (ret != reqSize) {
@@ -593,6 +571,72 @@ PSREQUEST
 	}
 	response->header = nheader;
 	SRequestNtoH(response);
+	
+failed:
+	if (response == NULL)
+		response = SRequestAlloc(status, SREQ_TYPE_INVALID, 0);
+	
+	if (request != NULL)
+		SRequestFree(request);
+
+	Ctx->response = response;
+
+	return STATUS_SUCCESS;
+}
+
+PSREQUEST
+	ServerConPoolSendReceive(PSERVER_CON_POOL ConPool, PSREQUEST requestParam)
+{
+	PSERVER_CON Con = NULL;
+	int status = SREQ_STATUS_ERROR;
+	LARGE_INTEGER Timeout;
+	CON_SEND_RECV_DATA Ctx;
+	PSYS_WRK_ITEM WrkItem = NULL;
+	PSREQUEST response = NULL;
+
+	if (!SRequestValid(requestParam)) {
+		KLog(LError, "SREQ_STATUS_BAD_REQUEST");
+		status = SREQ_STATUS_BAD_REQUEST;
+		goto failed;
+	}
+
+	if (ConPool->Stopping) {
+		KLog(LError, "SREQ_STATUS_CLIENT_SHUTDOWN");
+		status = SREQ_STATUS_CLIENT_SHUTDOWN;
+		goto failed;
+	}
+
+	Timeout.QuadPart = -3000 * 1000 * 10; // wait 3 secs
+	KeWaitForSingleObject(&ConPool->ActiveEvent, Executive, KernelMode, FALSE, &Timeout);
+	if (ConPool->Stopping) {
+		KLog(LError, "SREQ_STATUS_CLIENT_SHUTDOWN");
+		status = SREQ_STATUS_CLIENT_SHUTDOWN;
+		goto failed;
+	}
+
+	Con = ServerConPoolSelectCon(ConPool);
+	if (Con == NULL) {
+		KLog(LError, "ServerConPoolSelectCon failed");
+		status = SREQ_STATUS_NO_CON;
+		goto failed;
+	}
+	RtlZeroMemory(&Ctx, sizeof(Ctx));
+	Ctx.requestParam = requestParam;
+	Ctx.Con = Con;
+
+	WrkItem = SysWorkerAddWorkRef(&Con->Worker, ServerConSendReceive, &Ctx);
+	if (WrkItem == NULL) {
+		KLog(LError, "cant queue task");
+		status = SREQ_STATUS_NO_MEM;
+		goto failed;
+	}
+
+	KeWaitForSingleObject(&WrkItem->CompletionEvent, Executive, KernelMode, FALSE, NULL);
+	SYS_WRK_ITEM_DEREF(WrkItem);
+
+	response = Ctx.response;
+	if (response == NULL)
+		status = SREQ_STATUS_NO_RESPONSE;
 
 failed:
 	if (Con != NULL) {
@@ -602,9 +646,6 @@ failed:
 		}
 		ServerConDeref(Con);
 	}
-
-	if (request != NULL)
-		SRequestFree(request);
 
 	if (response == NULL)
 		return SRequestAlloc(status, SREQ_TYPE_INVALID, 0);

@@ -3,7 +3,7 @@
 #include <inc/drvmain.h>
 
 typedef
-VOID (NTAPI *PSYSTHREAD_ROUTINE)(PVOID Context);
+BOOLEAN (NTAPI *PSYSTHREAD_ROUTINE)(PVOID Context);
 
 typedef struct _SYSTHREAD {
 	HANDLE				ThreadHandle;

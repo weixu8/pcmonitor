@@ -233,7 +233,7 @@ start_failed:
 	Monitor->State = MONITOR_STATE_STOPPED;
 
 	KeReleaseGuardedMutex(&Monitor->Mutex);
-
+	
     return Status;
 }
 
@@ -289,7 +289,6 @@ VOID
 {
 	MonitorInitInternal(&g_Monitor, DriverObject);
 }
-
 
 NTSTATUS MonitorOpenWinstaWorker(POPEN_WINSTA OpenWinsta)
 {
