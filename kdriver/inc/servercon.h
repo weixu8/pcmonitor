@@ -43,6 +43,7 @@ typedef struct _SERVER_CON_POOL {
 	SYSWORKER			Worker;
 	LONG				selectCount;
 	volatile LONG		Stopping;
+	KEVENT				ActiveEvent;
 } SERVER_CON_POOL, *PSERVER_CON_POOL;
 
 VOID

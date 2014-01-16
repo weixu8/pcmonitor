@@ -47,11 +47,12 @@ SRequestRawAlloc(int requestSize)
 	if (request == NULL)
 		return NULL;
 
+	RtlZeroMemory(request, requestSize);
 	return request;
 }
 
 PSREQUEST
-SRequestAlloc(int status, int dataSize)
+SRequestAlloc(int status, int type, int dataSize)
 {
 	PSREQUEST request = NULL;
 	ULONG requestSize = sizeof(SREQUEST)+dataSize;
@@ -60,12 +61,43 @@ SRequestAlloc(int status, int dataSize)
 	if (request == NULL)
 		return NULL;
 
+	RtlZeroMemory(request, requestSize);
+	
 	request->header.sign = SREQUEST_HEADER_SIGN;
 	request->header.size = requestSize - sizeof(SREQUEST_HEADER);
 	request->dataSize = dataSize;
 	request->status = status;
+	request->type = type;
 
 	return request;
+}
+
+PSREQUEST
+SRequestCreate(int status, int type, int dataSize, void *data)
+{
+	PSREQUEST request = SRequestAlloc(status, type, dataSize);
+	PVOID dataPtr = NULL;
+
+	if (request == NULL)
+		return NULL;
+
+	dataPtr = SRequestGetDataPtr(request);
+	if (dataPtr != NULL) {
+		RtlCopyMemory(dataPtr, data, dataSize);
+	}
+
+	return request;
+}
+
+PVOID SRequestGetDataPtr(PSREQUEST request)
+{
+	if (!SRequestValid(request))
+		return NULL;
+
+	if (request->dataSize == 0)
+		return NULL;
+
+	return (PVOID)(request + 1);
 }
 
 BOOLEAN
@@ -95,7 +127,7 @@ BOOLEAN
 	if (request->dataSize < 0)
 		return FALSE;
 	
-	if (request->dataSize + sizeof(SREQUEST) > request->header.size)
+	if ((request->dataSize + sizeof(SREQUEST)) > (request->header.size + sizeof(SREQUEST_HEADER)))
 		return FALSE;
 
 	return TRUE;

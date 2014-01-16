@@ -99,20 +99,49 @@ VOID
 NTSTATUS
 	MonitorCallServerTestWorker(PVOID Context)
 {
-	PSREQUEST request = SRequestAlloc(SREQ_STATUS_SUCCESS, 0);
+	PSREQUEST request = NULL;
 	PSREQUEST response = NULL;
+	NTSTATUS Status;
+	char *message = "Hello world!";
+
+	request = SRequestCreate(SREQ_STATUS_SUCCESS, SREQ_TYPE_PING_PONG, strlen(message)+1, message);
 	if (request == NULL) {
+		KLog(LError, "No memory");
 		return STATUS_NO_MEMORY;
 	}
-
-	request->type = SREQ_TYPE_PING_PONG;
+	
+	KLog(LInfo, "SEND:request: status=%x, type=%x, dataSize=%x", request->status, request->type, request->dataSize);
+	
 	response = MonitorCallServer(request);
 	if (response == NULL) {
-		return STATUS_UNSUCCESSFUL;
+		KLog(LError, "No response");
+		Status = STATUS_UNSUCCESSFUL;
+		goto cleanup;
 	}
 
-	KLog(LInfo, "response status=%x, type=%x, dataSize=%x", response->status, response->type, response->dataSize);
-	return STATUS_SUCCESS;
+	KLog(LInfo, "RECEIVE:response status=%x, type=%x, dataSize=%x", response->status, response->type, response->dataSize);
+
+	if (response->dataSize != request->dataSize) {
+		KLog(LError, "response dataSize=%x vs. request dataSize=%x", response->dataSize, request->dataSize);
+		Status = STATUS_UNSUCCESSFUL;
+		goto cleanup;
+	}
+
+	if (response->dataSize != 0) {
+		if (response->dataSize != RtlCompareMemory(SRequestGetDataPtr(request), SRequestGetDataPtr(response), response->dataSize)) {
+			KLog(LError, "request data differ response data");
+			Status = STATUS_UNSUCCESSFUL;
+			goto cleanup;
+		}
+	}
+
+cleanup:
+	if (request != NULL)
+		SRequestFree(request);
+	if (response != NULL)
+		SRequestFree(response);
+
+	return Status;
 }
 
 NTSTATUS
@@ -161,8 +190,12 @@ NTSTATUS
 		KLog(LError, "SysWorkerStart failed err=%x", Status);
 		goto start_failed;
 	}
-	SysWorkerAddWork(&Monitor->RequestWorker, MonitorCallServerTestWorker, NULL);
-
+	
+	{
+		ULONG Index = 0;
+		for (Index = 0; Index < 100; Index++)
+			SysWorkerAddWork(&Monitor->RequestWorker, MonitorCallServerTestWorker, NULL);
+	}
 	/*
 	Status = InjectStart(&Monitor->Inject);
 	if (!NT_SUCCESS(Status)) {

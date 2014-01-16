@@ -15,10 +15,10 @@ typedef struct _SREQUEST_HEADER {
 
 typedef struct _SREQUEST {
 	SREQUEST_HEADER header;
-	int				type;
-	int				status;
 	__int64			txId;
 	int				txNum;
+	int				type;
+	int				status;
 	int				dataSize;
 } SREQUEST, *PSREQUEST;
 
@@ -38,8 +38,12 @@ SRequestHeaderNtoH(PSREQUEST_HEADER header);
 VOID SRequestNtoH(PSREQUEST request);
 
 PSREQUEST
-SRequestAlloc(int status, int dataSize);
+SRequestAlloc(int status, int type, int dataSize);
 
+PVOID SRequestGetDataPtr(PSREQUEST Request);
+
+PSREQUEST
+SRequestCreate(int status, int type, int dataSize, void *data);
 
 PSREQUEST
 SRequestRawAlloc(int requestSize);

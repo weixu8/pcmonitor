@@ -279,7 +279,6 @@ NTSTATUS
 	RtlZeroMemory(Con, sizeof(SERVER_CON));
 	Con->server_fd = -1;
 	Con->RefCount = 1;
-
 	Status = SysWorkerInitStart(&Con->Worker);
 	if (!NT_SUCCESS(Status)) {
 		return Status;
@@ -388,6 +387,12 @@ rescan:
 		ConPool->ConListCount++;
 	}
 unlock:
+
+	if (ConPool->ConListCount > 0)
+		KeSetEvent(&ConPool->ActiveEvent, 0, FALSE);
+	else
+		KeResetEvent(&ConPool->ActiveEvent);
+
 	KeReleaseGuardedMutex(&ConPool->Lock);
 
 	return Status;
@@ -419,6 +424,8 @@ ServerConPoolStart(PSERVER_CON_POOL ConPool, ULONG MaxCons)
 
 	RtlZeroMemory(ConPool, sizeof(SERVER_CON_POOL));
 	KeInitializeGuardedMutex(&ConPool->Lock);
+	KeInitializeEvent(&ConPool->ActiveEvent, NotificationEvent, FALSE);
+
 	InitializeListHead(&ConPool->ConListHead);
 	ConPool->MaxCons = MaxCons;
 
@@ -449,6 +456,8 @@ VOID
 	KeCancelTimer(&ConPool->Timer);
 	KeFlushQueuedDpcs();
 	SysWorkerStop(&ConPool->Worker);
+
+	KeSetEvent(&ConPool->ActiveEvent, 0, FALSE);
 
 	KeAcquireGuardedMutex(&ConPool->Lock);
 	while (!IsListEmpty(&ConPool->ConListHead)) {
@@ -508,6 +517,7 @@ PSREQUEST
 	ULONG reqSize = 0;
 	PSREQUEST response = NULL, request = NULL;
 	int status = SREQ_STATUS_ERROR;
+	LARGE_INTEGER Timeout;
 
 	if (!SRequestValid(requestParam)) {
 		KLog(LError, "SREQ_STATUS_BAD_REQUEST");
@@ -521,6 +531,21 @@ PSREQUEST
 		goto failed;
 	}
 
+	Timeout.QuadPart = -3000 * 1000 * 10; // wait 3 secs
+	KeWaitForSingleObject(&ConPool->ActiveEvent, Executive, KernelMode, FALSE, &Timeout);
+	if (ConPool->Stopping) {
+		KLog(LError, "SREQ_STATUS_CLIENT_SHUTDOWN");
+		status = SREQ_STATUS_CLIENT_SHUTDOWN;
+		goto failed;
+	}
+
+	Con = ServerConPoolSelectCon(ConPool);
+	if (Con == NULL) {
+		KLog(LError, "ServerConPoolSelectCon failed");
+		status = SREQ_STATUS_NO_CON;
+		goto failed;
+	}
+
 	request = SRequestClone(requestParam);
 	if (request == NULL) {
 		KLog(LError, "SRequestClone failed");
@@ -529,12 +554,6 @@ PSREQUEST
 	}
 
 	reqSize = SRequestMemSize(&request->header);
-	Con = ServerConPoolSelectCon(ConPool);
-	if (Con == NULL) {
-		KLog(LError, "ServerConPoolSelectCon failed");
-		status = SREQ_STATUS_NO_CON;
-		goto failed;
-	}
 	
 	SRequestHtoN(request);
 	ret = ServerConWrite(Con, (const unsigned char *)request, reqSize);
@@ -567,7 +586,7 @@ PSREQUEST
 	}
 
 	ret = ServerConRead(Con, (unsigned char *)(&response->header + 1), header.size);
-	if (ret != sizeof(header)) {
+	if (ret != header.size) {
 		KLog(LError, "ServerConRead(body) failed");
 		status = SREQ_STATUS_READ_IO_FAIL;
 		goto failed;
@@ -588,7 +607,7 @@ failed:
 		SRequestFree(request);
 
 	if (response == NULL)
-		return SRequestAlloc(status, 0);
+		return SRequestAlloc(status, SREQ_TYPE_INVALID, 0);
 	else
 		return response;
 }
