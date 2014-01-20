@@ -97,12 +97,12 @@ class ClientPacket
 		return output;
 	}
 	public String toString() {
-		String output = "clipkt=";
+		String output = "";
 		output+=" type=" + this.type + " status=" + this.status + " dataSize=" + this.dataSize;
 		if (this.data != null)
 			output+= " data=" + Utils.bytesToHex(data);
 		else
-			output+=" data=null";
+			output+= " data=null";
 		
 		return output;
 	}

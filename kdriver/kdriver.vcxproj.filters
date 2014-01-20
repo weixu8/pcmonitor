@@ -59,6 +59,9 @@
     <ClCompile Include="srequest.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="json.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\basictypes.h">
@@ -140,6 +143,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="inc\srequest_type.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\json.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

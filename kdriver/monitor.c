@@ -5,6 +5,7 @@
 #include <inc/processtable.h>
 #include <inc/sslclient.h>
 #include <inc/sockets.h>
+#include <inc/json.h>
 
 #define __SUBCOMPONENT__ "ecore"
 
@@ -156,6 +157,7 @@ NTSTATUS
 		return STATUS_TOO_LATE;
 	}
 
+	JsonInit();
 	if (0 != sock_init()) {
 		KLog(LError, "sock_init failed");
 		goto start_failed;

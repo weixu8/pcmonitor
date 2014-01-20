@@ -79,7 +79,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>$(DDK_LIB_PATH)\netio.lib;..\build\$(Platform)\$(Configuration)\injectstub.lib;..\build\$(Platform)\$(Configuration)\polarssl2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(DDK_LIB_PATH)\netio.lib;..\build\$(Platform)\$(Configuration)\injectstub.lib;..\build\$(Platform)\$(Configuration)\polarssl2.lib;..\build\$(Platform)\$(Configuration)\jansson.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>script.bat</Command>
@@ -90,6 +90,7 @@
     <FilesToPackage Include="@(Inf->'%(CopyOutput)')" Condition="'@(Inf)'!=''" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="json.c" />
     <ClCompile Include="driver.c" />
     <ClCompile Include="htable.c" />
     <ClCompile Include="keys.c" />
@@ -109,6 +110,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="h\drvioctl.h" />
+    <ClInclude Include="inc\json.h" />
     <ClInclude Include="inc\basictypes.h" />
     <ClInclude Include="inc\drvmain.h" />
     <ClInclude Include="inc\endian.h" />

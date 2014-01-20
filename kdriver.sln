@@ -6,6 +6,7 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kdriver", "kdriver\kdriver.vcxproj", "{99B8E5DD-8B9E-4037-A768-82DABF4DFF0D}"
 	ProjectSection(ProjectDependencies) = postProject
 		{F961B3BA-6212-4FE0-B0EC-85C4693204A9} = {F961B3BA-6212-4FE0-B0EC-85C4693204A9}
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2} = {EEA067CD-DAC2-405E-A88C-4C481781DBE2}
 		{96AA38F7-61F7-4210-A5DF-BA14903F70B7} = {96AA38F7-61F7-4210-A5DF-BA14903F70B7}
 	EndProjectSection
 EndProject
@@ -19,6 +20,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kdll", "kdll\kdll.vcxproj", "{F5AEB665-3DD1-46B6-906F-4E84BE19E6AE}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "polarssl2", "polarssl2\polarssl2.vcxproj", "{96AA38F7-61F7-4210-A5DF-BA14903F70B7}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "jansson", "jansson\jansson.vcxproj", "{EEA067CD-DAC2-405E-A88C-4C481781DBE2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -353,6 +356,78 @@ Global
 		{96AA38F7-61F7-4210-A5DF-BA14903F70B7}.Win8.1 Release|x64.ActiveCfg = Win7 Release|x64
 		{96AA38F7-61F7-4210-A5DF-BA14903F70B7}.Win8.1 Release|x64.Build.0 = Win7 Release|x64
 		{96AA38F7-61F7-4210-A5DF-BA14903F70B7}.Win8.1 Release|x64.Deploy.0 = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Debug|Mixed Platforms.ActiveCfg = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Debug|Mixed Platforms.Build.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Debug|Mixed Platforms.Deploy.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Debug|Win32.ActiveCfg = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Debug|Win32.Build.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Debug|Win32.Deploy.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Debug|x64.ActiveCfg = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Debug|x64.Build.0 = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Debug|x64.Deploy.0 = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Release|Mixed Platforms.ActiveCfg = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Release|Mixed Platforms.Build.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Release|Mixed Platforms.Deploy.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Release|Win32.ActiveCfg = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Release|Win32.Build.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Release|Win32.Deploy.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Release|x64.ActiveCfg = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Release|x64.Build.0 = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Release|x64.Deploy.0 = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win7 Debug|Mixed Platforms.ActiveCfg = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win7 Debug|Mixed Platforms.Build.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win7 Debug|Mixed Platforms.Deploy.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win7 Debug|Win32.ActiveCfg = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win7 Debug|Win32.Build.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win7 Debug|Win32.Deploy.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win7 Debug|x64.ActiveCfg = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win7 Debug|x64.Build.0 = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win7 Debug|x64.Deploy.0 = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win7 Release|Mixed Platforms.ActiveCfg = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win7 Release|Mixed Platforms.Build.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win7 Release|Mixed Platforms.Deploy.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win7 Release|Win32.ActiveCfg = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win7 Release|Win32.Build.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win7 Release|Win32.Deploy.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win7 Release|x64.ActiveCfg = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win7 Release|x64.Build.0 = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win7 Release|x64.Deploy.0 = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8 Debug|Mixed Platforms.ActiveCfg = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8 Debug|Mixed Platforms.Build.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8 Debug|Mixed Platforms.Deploy.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8 Debug|Win32.ActiveCfg = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8 Debug|Win32.Build.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8 Debug|Win32.Deploy.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8 Debug|x64.ActiveCfg = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8 Debug|x64.Build.0 = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8 Debug|x64.Deploy.0 = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8 Release|Mixed Platforms.ActiveCfg = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8 Release|Mixed Platforms.Build.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8 Release|Mixed Platforms.Deploy.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8 Release|Win32.ActiveCfg = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8 Release|Win32.Build.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8 Release|Win32.Deploy.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8 Release|x64.ActiveCfg = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8 Release|x64.Build.0 = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8 Release|x64.Deploy.0 = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8.1 Debug|Mixed Platforms.ActiveCfg = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8.1 Debug|Mixed Platforms.Build.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8.1 Debug|Mixed Platforms.Deploy.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8.1 Debug|Win32.ActiveCfg = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8.1 Debug|Win32.Build.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8.1 Debug|Win32.Deploy.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8.1 Debug|x64.ActiveCfg = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8.1 Debug|x64.Build.0 = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8.1 Debug|x64.Deploy.0 = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8.1 Release|Mixed Platforms.ActiveCfg = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8.1 Release|Mixed Platforms.Build.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8.1 Release|Mixed Platforms.Deploy.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8.1 Release|Win32.ActiveCfg = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8.1 Release|Win32.Build.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8.1 Release|Win32.Deploy.0 = Win7 Release|Win32
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8.1 Release|x64.ActiveCfg = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8.1 Release|x64.Build.0 = Win7 Release|x64
+		{EEA067CD-DAC2-405E-A88C-4C481781DBE2}.Win8.1 Release|x64.Deploy.0 = Win7 Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
