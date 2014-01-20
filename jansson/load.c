@@ -65,7 +65,9 @@ typedef struct {
     union {
         char *string;
         json_int_t integer;
+#ifndef JSON_WIN_KERNEL
         double real;
+#endif
     } value;
 } lex_t;
 
@@ -171,9 +173,11 @@ static int stream_get(stream_t *stream, json_error_t *error)
             count = utf8_check_first((char)c);
             if(!count)
                 goto out;
-
+#ifndef JSON_WIN_KERNEL
             assert(count >= 2);
-
+#else
+			ASSERT(count >= 2);
+#endif
             for(i = 1; i < count; i++)
                 stream->buffer[i] = (char)stream->get(stream->data);
 
@@ -220,10 +224,17 @@ static void stream_unget(stream_t *stream, int c)
     }
     else if(utf8_check_first((char)c))
         stream->column--;
-
+#ifndef JSON_WIN_KERNEL
     assert(stream->buffer_pos > 0);
+#else
+	ASSERT(stream->buffer_pos > 0);
+#endif
     stream->buffer_pos--;
-    assert(stream->buffer[stream->buffer_pos] == c);
+#ifndef JSON_WIN_KERNEL
+	assert(stream->buffer[stream->buffer_pos] == c);
+#else
+	ASSERT(stream->buffer[stream->buffer_pos] == c);
+#endif
 }
 
 
@@ -265,7 +276,11 @@ static void lex_unget_unsave(lex_t *lex, int c)
         d = 
         #endif
             strbuffer_pop(&lex->saved_text);
+#ifndef JSON_WIN_KERNEL
         assert(c == d);
+#else
+		ASSERT(c == d);
+#endif
     }
 }
 
@@ -284,8 +299,11 @@ static int32_t decode_unicode_escape(const char *str)
 {
     int i;
     int32_t value = 0;
-
+#ifndef JSON_WIN_KERNEL
     assert(str[0] == 'u');
+#else
+	ASSERT(str[0] == 'u');
+#endif
 
     for(i = 1; i <= 4; i++) {
         char c = str[i];
@@ -294,10 +312,14 @@ static int32_t decode_unicode_escape(const char *str)
             value += c - '0';
         else if(l_islower(c))
             value += c - 'a' + 10;
-        else if(l_isupper(c))
-            value += c - 'A' + 10;
-        else
-            assert(0);
+		else if (l_isupper(c))
+			value += c - 'A' + 10;
+		else
+#ifndef JSON_WIN_KERNEL
+			assert(0);
+#else
+			ASSERT(0);
+#endif
     }
 
     return value;
@@ -426,9 +448,12 @@ static void lex_scan_string(lex_t *lex, json_error_t *error)
                     goto out;
                 }
 
-                if(utf8_encode(value, buffer, &length))
-                    assert(0);
-
+				if (utf8_encode(value, buffer, &length))
+#ifndef JSON_WIN_KERNEL
+					assert(0);
+#else
+					ASSERT(0);
+#endif
                 memcpy(t, buffer, length);
                 t += length;
             }
@@ -441,7 +466,12 @@ static void lex_scan_string(lex_t *lex, json_error_t *error)
                     case 'n': *t = '\n'; break;
                     case 'r': *t = '\r'; break;
                     case 't': *t = '\t'; break;
-                    default: assert(0);
+                    default: 
+#ifndef JSON_WIN_KERNEL
+						assert(0);
+#else
+						ASSERT(0);
+#endif
                 }
                 t++;
                 p++;
@@ -515,13 +545,18 @@ static int lex_scan_number(lex_t *lex, int c, json_error_t *error)
             goto out;
         }
 
+#ifndef JSON_WIN_KERNEL
         assert(end == saved_text + lex->saved_text.length);
+#else
+		ASSERT(end == saved_text + lex->saved_text.length);
+#endif
 
         lex->token = TOKEN_INTEGER;
         lex->value.integer = value;
         return 0;
     }
 
+#ifndef JSON_WIN_KERNEL
     if(c == '.') {
         c = lex_get(lex, error);
         if(!l_isdigit(c)) {
@@ -560,7 +595,9 @@ static int lex_scan_number(lex_t *lex, int c, json_error_t *error)
     lex->token = TOKEN_REAL;
     lex->value.real = value;
     return 0;
-
+#else
+	goto out;
+#endif
 out:
     return -1;
 }
@@ -783,9 +820,10 @@ error:
 
 static json_t *parse_value(lex_t *lex, size_t flags, json_error_t *error)
 {
-    json_t *json;
+    json_t *json = NULL;
+#ifndef JSON_WIN_KERNEL
     double value;
-
+#endif
     switch(lex->token) {
         case TOKEN_STRING: {
             json = json_string_nocheck(lex->value.string);
@@ -794,22 +832,24 @@ static json_t *parse_value(lex_t *lex, size_t flags, json_error_t *error)
 
         case TOKEN_INTEGER: {
             if (flags & JSON_DECODE_INT_AS_REAL) {
+#ifndef JSON_WIN_KERNEL
                 if(jsonp_strtod(&lex->saved_text, &value)) {
                     error_set(error, lex, "real number overflow");
                     return NULL;
                 }
                 json = json_real(value);
+#endif
             } else {
                 json = json_integer(lex->value.integer);
             }
             break;
         }
-
+#ifndef JSON_WIN_KERNEL
         case TOKEN_REAL: {
             json = json_real(lex->value.real);
             break;
         }
-
+#endif
         case TOKEN_TRUE:
             json = json_true();
             break;
@@ -968,6 +1008,7 @@ json_t *json_loadb(const char *buffer, size_t buflen, size_t flags, json_error_t
     return result;
 }
 
+#ifndef JSON_WIN_KERNEL
 json_t *json_loadf(FILE *input, size_t flags, json_error_t *error)
 {
     lex_t lex;
@@ -1020,6 +1061,7 @@ json_t *json_load_file(const char *path, size_t flags, json_error_t *error)
     fclose(fp);
     return result;
 }
+#endif
 
 #define MAX_BUF_LEN 1024
 

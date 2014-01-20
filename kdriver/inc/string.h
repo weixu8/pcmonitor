@@ -8,3 +8,4 @@ NTSTATUS
 
 VOID
 	CRtlUnicodeStringFreeAndZero(IN PUNICODE_STRING Src);
+

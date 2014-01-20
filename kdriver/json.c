@@ -14,16 +14,20 @@ void JsonFree(void *ptr)
 	ExFreePoolWithTag(ptr, MODULE_TAG);
 }
 
-void JsonMapInit(PJSON_MAP map)
+int JsonMapInit(PJSON_MAP map)
 {
 	RtlZeroMemory(map, sizeof(JSON_MAP));
 	map->object = json_object();
+	if (map->object == NULL)
+		return -1;
+	return 0;
 }
 
 void JsonMapRelease(PJSON_MAP map)
 {
 	if (map->object != NULL)
 		json_decref(map->object);
+	map->object = NULL;
 }
 
 int JsonMapSetString(PJSON_MAP map, const char *key, const char *value)
@@ -41,6 +45,73 @@ int JsonMapSetString(PJSON_MAP map, const char *key, const char *value)
 		json_decref(value_t);
 
 	return res;
+}
+
+char *JsonMapGetString(PJSON_MAP map, const char *key)
+{
+	json_t *value_t = NULL;
+	const char *string = NULL;
+	char *stringCopy = NULL;
+
+	value_t = json_object_get(map->object, key);
+	if (value_t == NULL)
+		return NULL;
+
+	if (!json_is_string(value_t))
+		return NULL;
+	
+	string = json_string_value(value_t);
+	if (string != NULL) {
+		int stringSize = strlen(string) + 1;
+		stringCopy = ExAllocatePoolWithTag(NonPagedPool, stringSize, MODULE_TAG);
+		if (stringCopy != NULL)
+			goto cleanup;
+
+		RtlCopyMemory(stringCopy, string, stringSize);
+	}
+
+cleanup:
+	if (value_t != NULL)
+		json_decref(value_t);
+	return stringCopy;
+}
+
+int JsonMapGetUlong(PJSON_MAP map, const char *key, PULONG pvalue)
+{
+	json_t *value_t = NULL;
+	char *string = NULL;
+	char *stringCopy = NULL;
+	ULONG value = -1;
+
+	value_t = json_object_get(map->object, key);
+	if (value_t == NULL)
+		return -1;
+
+	if (json_typeof(value_t) != JSON_INTEGER)
+		return -1;
+
+	*pvalue = (ULONG)json_integer_value(value_t);
+
+	return 0;
+}
+
+int JsonMapGetLong(PJSON_MAP map, const char *key, PLONG pvalue)
+{
+	json_t *value_t = NULL;
+	char *string = NULL;
+	char *stringCopy = NULL;
+	ULONG value = -1;
+
+	value_t = json_object_get(map->object, key);
+	if (value_t == NULL)
+		return -1;
+
+	if (json_typeof(value_t) != JSON_INTEGER)
+		return -1;
+
+	*pvalue = (LONG)json_integer_value(value_t);
+
+	return 0;
 }
 
 int JsonMapSetUlong(PJSON_MAP map, const char *key, ULONG value)
@@ -88,7 +159,10 @@ void JsonSelfTest()
 	JSON_MAP map;
 	char *encoded = NULL;
 
-	JsonMapInit(&map);
+	if (JsonMapInit(&map)) {
+		KLog(LError, "JsonMapInit failed");
+		goto cleanup;
+	}
 
 	if (JsonMapSetString(&map, "message", "test")) {
 		KLog(LError, "JsonMapSetString failed");
@@ -118,6 +192,18 @@ cleanup:
 		JsonFree(encoded);
 
 	JsonMapRelease(&map);
+}
+
+
+int JsonMapLoads(PJSON_MAP map, const char *json)
+{
+	json_error_t error;
+
+	JsonMapRelease(map);
+	map->object = json_loads(json, 0, &error);
+	if (map->object == NULL)
+		return -1;
+	return 0;
 }
 
 void JsonInit()

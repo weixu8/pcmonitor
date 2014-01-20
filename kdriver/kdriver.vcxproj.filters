@@ -62,6 +62,9 @@
     <ClCompile Include="srequest_header.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="srequest.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\basictypes.h">
@@ -140,6 +143,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="inc\srequest_header.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\srequest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

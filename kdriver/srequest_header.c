@@ -33,7 +33,6 @@ SRequestHeaderNtoH(PSREQUEST_HEADER header)
 	header->size = ntohl(header->size);
 }
 
-
 BOOLEAN
 	SRequestHeaderValid(PSREQUEST_HEADER header)
 {
