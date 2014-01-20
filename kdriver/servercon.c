@@ -486,6 +486,9 @@ PSERVER_CON
 rescan:
 	Con = NULL;
 	CurrPos = 0;
+	if (ConPool->ConListCount == 0)
+		goto unlock;
+
 	SelPos = (ConPool->selectCount++)%ConPool->ConListCount;
 	for (ListEntry = ConPool->ConListHead.Flink; ListEntry != &ConPool->ConListHead; ListEntry = ListEntry->Flink) {
 		if (SelPos == CurrPos) {
@@ -511,98 +514,74 @@ unlock:
 
 typedef struct _CON_SEND_RECV_DATA {
 	PSERVER_CON Con;
-	PSREQUEST	requestParam;
-	PSREQUEST	response;
+	char		*request;
+	char		*response;
 } CON_SEND_RECV_DATA, *PCON_SEND_RECV_DATA;
 
 NTSTATUS
 	ServerConSendReceive(PCON_SEND_RECV_DATA Ctx)
 {
-	ULONG reqSize = 0;
 	int ret = -1;
 	PSERVER_CON Con = Ctx->Con;
-	int status = SREQ_STATUS_ERROR;
-	SREQUEST_HEADER header, nheader;
-	PSREQUEST response = NULL, request = NULL;
+	SREQUEST_HEADER request_header, response_header;
+	char *response = NULL, *request = Ctx->request;
+	int reqSize = strlen(request);
 
-	request = SRequestClone(Ctx->requestParam);
-	if (request == NULL) {
-		KLog(LError, "SRequestClone failed");
-		status = SREQ_STATUS_NO_MEM;
+	SRequestHeaderInitAndHtoN(&request_header, reqSize);
+	ret = ServerConWrite(Con, (const unsigned char *)&request_header, sizeof(request_header));
+	if (ret != sizeof(request_header)) {
+		KLog(LError, "ServerConWrite failed, ret=%x", ret);
 		goto failed;
 	}
 
-	reqSize = SRequestMemSize(&request->header);
-	SRequestHtoN(request);
 	ret = ServerConWrite(Con, (const unsigned char *)request, reqSize);
 	if (ret != reqSize) {
 		KLog(LError, "ServerConWrite failed, ret=%x", ret);
-		status = SREQ_STATUS_WRITE_IO_FAIL;
 		goto failed;
 	}
 
-	ret = ServerConRead(Con, (unsigned char *)&nheader, sizeof(nheader));
-	if (ret != sizeof(header)) {
+	ret = ServerConRead(Con, (unsigned char *)&response_header, sizeof(response_header));
+	if (ret != sizeof(response_header)) {
 		KLog(LError, "ServerConRead(header) failed, ret=%x", ret);
-		status = SREQ_STATUS_READ_IO_FAIL;
 		goto failed;
 	}
-	header = nheader;
-	SRequestHeaderNtoH(&header);
+	SRequestHeaderNtoH(&response_header);
 
-	if (!SRequestHeaderValid(&header)) {
+	if (!SRequestHeaderValid(&response_header)) {
 		KLog(LError, "header invalid");
-		status = SREQ_STATUS_BAD_RESPONSE;
 		goto failed;
 	}
 
-	response = SRequestRawAlloc(SRequestMemSize(&header));
+	response = ExAllocatePoolWithTag(NonPagedPool, response_header.size + 1, MODULE_TAG);
 	if (response == NULL) {
-		KLog(LError, "SRequestRawAlloc failed");
-		status = SREQ_STATUS_NO_MEM;
+		KLog(LError, "ExAllocatePoolWithTag failed for sz=%x", response_header.size);
 		goto failed;
 	}
 
-	ret = ServerConRead(Con, (unsigned char *)(&response->header + 1), header.size);
-	if (ret != header.size) {
+	ret = ServerConRead(Con, (unsigned char *)(response), response_header.size);
+	if (ret != response_header.size) {
 		KLog(LError, "ServerConRead(body) failed");
-		status = SREQ_STATUS_READ_IO_FAIL;
 		goto failed;
 	}
-	response->header = nheader;
-	SRequestNtoH(response);
-	
-failed:
-	if (response == NULL)
-		response = SRequestAlloc(status, SREQ_TYPE_INVALID, 0);
-	
-	if (request != NULL)
-		SRequestFree(request);
+	response[response_header.size] = '\0';
 
+failed:
 	Ctx->response = response;
 
 	return STATUS_SUCCESS;
 }
 
-PSREQUEST
-	ServerConPoolSendReceive(PSERVER_CON_POOL ConPool, PSREQUEST requestParam)
+char *
+	ServerConPoolSendReceive(PSERVER_CON_POOL ConPool, char *request)
 {
 	PSERVER_CON Con = NULL;
-	int status = SREQ_STATUS_ERROR;
 	LARGE_INTEGER Timeout;
 	CON_SEND_RECV_DATA Ctx;
 	PSYS_WRK_ITEM WrkItem = NULL;
-	PSREQUEST response = NULL;
-
-	if (!SRequestValid(requestParam)) {
-		KLog(LError, "SREQ_STATUS_BAD_REQUEST");
-		status = SREQ_STATUS_BAD_REQUEST;
-		goto failed;
-	}
+	char *response = NULL;
 
 	if (ConPool->Stopping) {
 		KLog(LError, "SREQ_STATUS_CLIENT_SHUTDOWN");
-		status = SREQ_STATUS_CLIENT_SHUTDOWN;
 		goto failed;
 	}
 
@@ -610,24 +589,21 @@ PSREQUEST
 	KeWaitForSingleObject(&ConPool->ActiveEvent, Executive, KernelMode, FALSE, &Timeout);
 	if (ConPool->Stopping) {
 		KLog(LError, "SREQ_STATUS_CLIENT_SHUTDOWN");
-		status = SREQ_STATUS_CLIENT_SHUTDOWN;
 		goto failed;
 	}
 
 	Con = ServerConPoolSelectCon(ConPool);
 	if (Con == NULL) {
 		KLog(LError, "ServerConPoolSelectCon failed");
-		status = SREQ_STATUS_NO_CON;
 		goto failed;
 	}
 	RtlZeroMemory(&Ctx, sizeof(Ctx));
-	Ctx.requestParam = requestParam;
+	Ctx.request = request;
 	Ctx.Con = Con;
 
 	WrkItem = SysWorkerAddWorkRef(&Con->Worker, ServerConSendReceive, &Ctx);
 	if (WrkItem == NULL) {
 		KLog(LError, "cant queue task");
-		status = SREQ_STATUS_NO_MEM;
 		goto failed;
 	}
 
@@ -635,8 +611,6 @@ PSREQUEST
 	SYS_WRK_ITEM_DEREF(WrkItem);
 
 	response = Ctx.response;
-	if (response == NULL)
-		status = SREQ_STATUS_NO_RESPONSE;
 
 failed:
 	if (Con != NULL) {
@@ -647,8 +621,5 @@ failed:
 		ServerConDeref(Con);
 	}
 
-	if (response == NULL)
-		return SRequestAlloc(status, SREQ_TYPE_INVALID, 0);
-	else
-		return response;
+	return response;
 }

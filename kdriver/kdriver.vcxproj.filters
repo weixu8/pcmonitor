@@ -56,10 +56,10 @@
     <ClCompile Include="servercon.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="srequest.c">
+    <ClCompile Include="json.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="json.c">
+    <ClCompile Include="srequest_header.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -133,19 +133,13 @@
     <ClInclude Include="inc\servercon.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="inc\srequest.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\srequest_status.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="inc\endian.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="inc\srequest_type.h">
+    <ClInclude Include="inc\json.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="inc\json.h">
+    <ClInclude Include="inc\srequest_header.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

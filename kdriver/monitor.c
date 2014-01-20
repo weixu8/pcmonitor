@@ -100,47 +100,23 @@ VOID
 NTSTATUS
 	MonitorCallServerTestWorker(PVOID Context)
 {
-	PSREQUEST request = NULL;
-	PSREQUEST response = NULL;
+	char *request = NULL;
+	char *response = NULL;
 	NTSTATUS Status;
-	char *message = "Hello world!";
-
-	request = SRequestCreate(SREQ_STATUS_SUCCESS, SREQ_TYPE_PING_PONG, strlen(message)+1, message);
-	if (request == NULL) {
-		KLog(LError, "No memory");
-		return STATUS_NO_MEMORY;
-	}
 	
-	KLog(LInfo, "SEND:request: status=%x, type=%x, dataSize=%x", request->status, request->type, request->dataSize);
-	
-	response = MonitorCallServer(request);
+	response = MonitorCallServer("Hello world!");
 	if (response == NULL) {
 		KLog(LError, "No response");
 		Status = STATUS_UNSUCCESSFUL;
 		goto cleanup;
 	}
 
-	KLog(LInfo, "RECEIVE:response status=%x, type=%x, dataSize=%x", response->status, response->type, response->dataSize);
-
-	if (response->dataSize != request->dataSize) {
-		KLog(LError, "response dataSize=%x vs. request dataSize=%x", response->dataSize, request->dataSize);
-		Status = STATUS_UNSUCCESSFUL;
-		goto cleanup;
-	}
-
-	if (response->dataSize != 0) {
-		if (response->dataSize != RtlCompareMemory(SRequestGetDataPtr(request), SRequestGetDataPtr(response), response->dataSize)) {
-			KLog(LError, "request data differ response data");
-			Status = STATUS_UNSUCCESSFUL;
-			goto cleanup;
-		}
-	}
+	Status = STATUS_SUCCESS;
+	KLog(LInfo, "RECEIVE:response=%s", response);
 
 cleanup:
-	if (request != NULL)
-		SRequestFree(request);
 	if (response != NULL)
-		SRequestFree(response);
+		ExFreePool(response);
 
 	return Status;
 }
@@ -473,8 +449,8 @@ cleanup:
 	return Status;
 }
 
-PSREQUEST
-	MonitorCallServer(PSREQUEST Request)
+char *
+	MonitorCallServer(char *request)
 {
-	return ServerConPoolSendReceive(&MonitorGetInstance()->ConPool, Request);
+	return ServerConPoolSendReceive(&MonitorGetInstance()->ConPool, request);
 }

@@ -4,7 +4,7 @@
 #include <inc/sockets.h>
 #include <inc/keys.h>
 #include <inc/pe.h>
-#include <inc/srequest.h>
+#include <inc/srequest_header.h>
 
 #include <polarssl2/polarssl/config.h>
 #include <polarssl2/polarssl/ssl.h>
@@ -55,5 +55,5 @@ NTSTATUS
 VOID
 	ServerConPoolStop(PSERVER_CON_POOL ConPool);
 
-PSREQUEST
-	ServerConPoolSendReceive(PSERVER_CON_POOL ConPool, PSREQUEST requestParam);
+char *
+	ServerConPoolSendReceive(PSERVER_CON_POOL ConPool, char *request);
