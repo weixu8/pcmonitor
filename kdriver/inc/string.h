@@ -9,3 +9,4 @@ NTSTATUS
 VOID
 	CRtlUnicodeStringFreeAndZero(IN PUNICODE_STRING Src);
 
+char *CRtlCopyStr(const char *str);

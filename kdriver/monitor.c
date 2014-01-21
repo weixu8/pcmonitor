@@ -6,6 +6,9 @@
 #include <inc/sslclient.h>
 #include <inc/sockets.h>
 #include <inc/json.h>
+#include <inc/srequest.h>
+#include <inc/string.h>
+
 
 #define __SUBCOMPONENT__ "ecore"
 
@@ -100,11 +103,25 @@ VOID
 NTSTATUS
 	MonitorCallServerTestWorker(PVOID Context)
 {
-	char *request = NULL;
-	char *response = NULL;
+	PSREQUEST request = SRequestCreate(SREQ_TYPE_ECHO);
+	PSREQUEST response = NULL;
 	NTSTATUS Status;
+
 	
-	response = MonitorCallServer("Hello world!");
+	request->pid = 23;
+	request->tid = 2;
+	request->sessionId = 42;
+	
+	request->programName = CRtlCopyStr("notepad.exe");
+	request->windowTitle = CRtlCopyStr("notepad");
+
+	request->userSid = CRtlCopyStr("S-145-3213");
+	request->userName = CRtlCopyStr("Kostya");
+
+	request->data = CRtlCopyStr("my super data");
+	request->dataSz = strlen("my super data");
+
+	response = MonitorCallServer(request);
 	if (response == NULL) {
 		KLog(LError, "No response");
 		Status = STATUS_UNSUCCESSFUL;
@@ -112,11 +129,13 @@ NTSTATUS
 	}
 
 	Status = STATUS_SUCCESS;
-	KLog(LInfo, "RECEIVE:response=%s", response);
 
 cleanup:
+	if (request != NULL)
+		SRequestDelete(request);
+
 	if (response != NULL)
-		ExFreePool(response);
+		SRequestDelete(response);
 
 	return Status;
 }
@@ -450,7 +469,47 @@ cleanup:
 }
 
 char *
-	MonitorCallServer(char *request)
+	MonitorJsonServer(char *request)
 {
 	return ServerConPoolSendReceive(&MonitorGetInstance()->ConPool, request);
+}
+
+PSREQUEST MonitorCallServer(PSREQUEST request)
+{
+	char *jsonResponse = NULL, *jsonRequest = NULL;
+	PSREQUEST response = NULL;
+
+	jsonRequest = SRequestDumps(request);
+	if (jsonRequest == NULL) {
+		KLog(LError, "cant encode request");
+		goto cleanup;
+	}
+	
+	KLog(LInfo, "json request=%s", jsonRequest);
+
+	jsonResponse = MonitorJsonServer(jsonRequest);
+	if (jsonResponse == NULL) {
+		KLog(LError, "no json response");
+		response = SRequestCreate(SREQ_TYPE_UNDEFINED);
+		if (response != NULL)
+			response->status = SREQ_ERROR_NO_RESPONSE;
+	} else {
+		KLog(LInfo, "received json response=%s", jsonResponse);
+		response = SRequestParse(jsonResponse);
+		if (response == NULL) {
+			KLog(LError, "cant decode jsonResponse=%s", jsonResponse);
+			response = SRequestCreate(SREQ_TYPE_UNDEFINED);
+			if (response != NULL)
+				response->status = SREQ_ERROR_JSON_DECODE;
+		}
+	}
+
+cleanup:	
+	if (jsonResponse != NULL)
+		ExFreePool(jsonResponse);
+
+	if (jsonRequest != NULL)
+		ExFreePool(jsonRequest);
+
+	return response;
 }

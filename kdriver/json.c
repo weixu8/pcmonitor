@@ -1,5 +1,6 @@
 #include <inc/json.h>
 #include <inc/klogger.h>
+#include <inc/string.h>
 
 #define __SUBCOMPONENT__ "json"
 #define MODULE_TAG 'jsal'
@@ -41,6 +42,7 @@ int JsonMapSetString(PJSON_MAP map, const char *key, const char *value)
 	}
 
 	res = json_object_set(map->object, key, value_t);
+
 	if (value_t != NULL)
 		json_decref(value_t);
 
@@ -58,21 +60,15 @@ char *JsonMapGetString(PJSON_MAP map, const char *key)
 		return NULL;
 
 	if (!json_is_string(value_t))
-		return NULL;
+		goto cleanup;
 	
 	string = json_string_value(value_t);
 	if (string != NULL) {
-		int stringSize = strlen(string) + 1;
-		stringCopy = ExAllocatePoolWithTag(NonPagedPool, stringSize, MODULE_TAG);
-		if (stringCopy != NULL)
-			goto cleanup;
-
-		RtlCopyMemory(stringCopy, string, stringSize);
+		stringCopy = CRtlCopyStr(string);
 	}
 
 cleanup:
-	if (value_t != NULL)
-		json_decref(value_t);
+
 	return stringCopy;
 }
 
@@ -82,17 +78,21 @@ int JsonMapGetUlong(PJSON_MAP map, const char *key, PULONG pvalue)
 	char *string = NULL;
 	char *stringCopy = NULL;
 	ULONG value = -1;
+	int res = -1;
 
 	value_t = json_object_get(map->object, key);
 	if (value_t == NULL)
-		return -1;
+		goto cleanup;
 
 	if (json_typeof(value_t) != JSON_INTEGER)
-		return -1;
+		goto cleanup;
 
 	*pvalue = (ULONG)json_integer_value(value_t);
+	res = 0;
 
-	return 0;
+cleanup:
+
+	return res;
 }
 
 int JsonMapGetLong(PJSON_MAP map, const char *key, PLONG pvalue)
@@ -101,17 +101,20 @@ int JsonMapGetLong(PJSON_MAP map, const char *key, PLONG pvalue)
 	char *string = NULL;
 	char *stringCopy = NULL;
 	ULONG value = -1;
+	int res = -1;
 
 	value_t = json_object_get(map->object, key);
 	if (value_t == NULL)
-		return -1;
+		goto cleanup;
 
 	if (json_typeof(value_t) != JSON_INTEGER)
-		return -1;
+		goto cleanup;
 
 	*pvalue = (LONG)json_integer_value(value_t);
+	res = 0;
+cleanup:
 
-	return 0;
+	return res;
 }
 
 int JsonMapSetUlong(PJSON_MAP map, const char *key, ULONG value)

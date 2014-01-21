@@ -16,6 +16,7 @@ public class ServerConf implements IMapDumpable {
 	public String ksPath = null;
 	public String ksPass = null;
 	public String keyPass = null;
+	public String ksType = null;
 	
 	@Override
 	public boolean parseMap(Map<String, String> map) {
@@ -28,6 +29,7 @@ public class ServerConf implements IMapDumpable {
 		ksPath = map.get("ksPath");
 		ksPass = map.get("ksPass");
 		keyPass = map.get("keyPass");
+		ksType = map.get("ksType");
 		
 		return true;
 	}
@@ -42,6 +44,7 @@ public class ServerConf implements IMapDumpable {
 		map.put("ksPath", ksPath);
 		map.put("ksPass", ksPass);
 		map.put("keyPass", keyPass);
+		map.put("ksType", ksType);
 		
 		return map;
 	}

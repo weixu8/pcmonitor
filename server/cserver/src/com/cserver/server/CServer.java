@@ -135,7 +135,7 @@ public class CServer {
     		return;
     	}
    	
-        new NSServer(conf.httpPort).run(new CServerHandler(), new File(wrkPathFile, conf.ksPath).getAbsolutePath(), conf.ksPass, conf.keyPass, "JKS");
+        new NSServer(conf.httpPort).run(new CServerHandler(), new File(wrkPathFile, conf.ksPath).getAbsolutePath(), conf.ksPass, conf.keyPass, conf.ksType);
     	//new NSServer(conf.httpPort).run(new CServerHandler(), null, null, null);
 
     }
