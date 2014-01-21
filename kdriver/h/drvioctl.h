@@ -20,15 +20,27 @@ enum {
 	KMON_DRV_OPEN_DESKTOP
 };
 
+#define KMON_MAX_CHARS 0x100
+
+typedef struct _KMON_INIT {
+	char		clientId[KMON_MAX_CHARS];
+	char		authId[KMON_MAX_CHARS];
+} KMON_INIT, *PKMON_INIT;
+
+typedef struct _KMON_RELEASE {
+	char		clientId[KMON_MAX_CHARS];
+	char		authId[KMON_MAX_CHARS];
+} KMON_RELEASE, *PKMON_RELEASE;
+
 typedef struct _OPEN_WINSTA {
-	unsigned short	WinstaName[0x100];
+	unsigned short	WinstaName[KMON_MAX_CHARS];
 	void			*hWinsta;
 	void			*Process;
 	unsigned long	Error;
 } OPEN_WINSTA, *POPEN_WINSTA;
 
 typedef struct _OPEN_DESKTOP {
-	unsigned short	DesktopName[0x100];
+	unsigned short	DesktopName[KMON_MAX_CHARS];
 	void			*hWinsta;
 	void			*hDesktop;
 	void			*Process;

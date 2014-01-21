@@ -10,3 +10,5 @@ VOID
 	CRtlUnicodeStringFreeAndZero(IN PUNICODE_STRING Src);
 
 char *CRtlCopyStr(const char *str);
+
+char *CRtlCopyStrFromWstrBuffer(PWSTR Buf, ULONG NumChars);

@@ -8,8 +8,7 @@ import com.cserver.shared.SLogger;
 public class CServerHandler implements INSServerHandler {
 
 	private static final String TAG = "ServerHandleRequest";
-		
-
+	
 	@Override
 	public byte[] handle(byte[] input) {
 		// TODO Auto-generated method stub

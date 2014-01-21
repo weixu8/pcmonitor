@@ -28,16 +28,19 @@ typedef struct _MONITOR {
 	PROCESS_TABLE	ProcessTable;
 	KBD_CONTEXT		Kbd;
 	SERVER_CON_POOL ConPool;
+	char			*clientId;
+	char			*authId;
+	char			*hostId;
 } MONITOR, *PMONITOR;
 
 VOID
 	MonitorInit(PDRIVER_OBJECT	DriverObject);
 
 NTSTATUS
-    MonitorStart();
+    MonitorStart(PKMON_INIT InitData);
 
 NTSTATUS
-    MonitorStop();
+    MonitorStop(PKMON_RELEASE ReleaseData);
 
 NTSTATUS
 	MonitorOpenWinsta(POPEN_WINSTA Winsta);

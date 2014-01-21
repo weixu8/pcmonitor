@@ -1,6 +1,8 @@
 #include <inc/srequest.h>
 #include <polarssl2/polarssl/base64.h>
 #include <inc/klogger.h>
+#include <inc/monitor.h>
+#include <inc/string.h>
 
 #define MODULE_TAG 'sreq'
 #define __SUBCOMPONENT__ "srequest"
@@ -124,11 +126,26 @@ failed:
 PSREQUEST SRequestCreate(int type)
 {
 	PSREQUEST request = NULL;
+	char *hostId = MonitorGetInstance()->hostId;
+	char *authId = MonitorGetInstance()->authId;
+	char *clientId = MonitorGetInstance()->clientId;
+
 	request = ExAllocatePoolWithTag(NonPagedPool, sizeof(SREQUEST), MODULE_TAG);
 	if (request == NULL)
 		return NULL;
 	
-	SRequestInit(request);
+	if (SRequestInit(request)) {
+		ExFreePoolWithTag(request, MODULE_TAG);
+		return NULL;
+	}
+	
+	if (hostId != NULL)
+		request->hostId = CRtlCopyStr(hostId);
+	if (authId != NULL)
+		request->authId = CRtlCopyStr(authId);
+	if (clientId != NULL)
+		request->clientId = CRtlCopyStr(clientId);
+
 	request->type = type;
 
 	return request;

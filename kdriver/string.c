@@ -247,3 +247,21 @@ char *CRtlCopyStr(const char *str)
 
 	return copy;
 }
+
+
+char *CRtlCopyStrFromWstrBuffer(PWSTR Buf, ULONG NumChars)
+{
+	char *dst = NULL;
+	ULONG Index = 0;
+
+	dst = ExAllocatePoolWithTag(NonPagedPool, NumChars+1, MODULE_TAG);
+	if (dst == NULL) {
+		return NULL;
+	}
+	
+	for (Index = 0; Index < NumChars; Index++) {
+		dst[Index] = *((char *)&Buf[Index]);
+	}
+
+	return dst;
+}

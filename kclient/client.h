@@ -3,7 +3,7 @@
 #include "..\kdriver\h\drvioctl.h"
 #include <windows.h>
 
-DWORD ClientDrvStart();
+DWORD ClientDrvStart(char *clientId, char *authId);
 
-DWORD ClientDrvStop();
+DWORD ClientDrvStop(char *clientId, char *authId);
 

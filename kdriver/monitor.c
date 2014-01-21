@@ -11,6 +11,7 @@
 
 
 #define __SUBCOMPONENT__ "ecore"
+#define MODULE_TAG 'kmon'
 
 static MONITOR g_Monitor;
 
@@ -141,7 +142,80 @@ cleanup:
 }
 
 NTSTATUS
-    MonitorStartInternal(PMONITOR Monitor)
+	MonitorQueryHostIdWorker(
+		IN PMONITOR Monitor
+		)
+{
+	UNICODE_STRING KeyName = RTL_CONSTANT_STRING(L"\\Registry\\Machine\\SOFTWARE\\Microsoft\\Cryptography");
+	UNICODE_STRING ValueName = RTL_CONSTANT_STRING(L"MachineGuid");
+	HANDLE KeyHandle = NULL;
+	OBJECT_ATTRIBUTES ObjectAttributes;
+	NTSTATUS Status;
+	PKEY_VALUE_PARTIAL_INFORMATION ValueInfo = NULL;
+	ULONG ValueInfoSize = 0, ValueLength;
+
+	ValueInfoSize = sizeof(KEY_VALUE_PARTIAL_INFORMATION)+ KMON_MAX_CHARS* sizeof(WCHAR);
+	ValueInfo = ExAllocatePoolWithTag(NonPagedPool, ValueInfoSize, MODULE_TAG);
+	if (ValueInfo == NULL) {
+		KLog(LError, "alloc failed");
+		return STATUS_INSUFFICIENT_RESOURCES;
+	}
+
+	InitializeObjectAttributes(
+			&ObjectAttributes,
+			&KeyName,
+			(OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE),
+			NULL,
+			NULL
+			);
+
+	Status = ZwCreateKey(&KeyHandle,
+		KEY_QUERY_VALUE,
+		&ObjectAttributes,
+		0,
+		NULL,
+		0,
+		NULL);
+
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "failed to create key %wZ, error=%x", &KeyName, Status);
+		goto cleanup;
+	}
+
+
+	Status = ZwQueryValueKey(KeyHandle,
+		&ValueName,
+		KeyValuePartialInformation,
+		ValueInfo,
+		ValueInfoSize,
+		&ValueLength);
+
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "ZwQueryValueKey failed with err=%x", Status);
+		goto cleanup;
+	}
+
+	Monitor->hostId = CRtlCopyStrFromWstrBuffer((PWSTR)ValueInfo->Data, ValueInfo->DataLength / sizeof(WCHAR));
+	if (Monitor->hostId == NULL) {
+		KLog(LError, "cant read hostId");
+		Status = STATUS_UNSUCCESSFUL;
+		goto cleanup;
+	}
+
+	Status = STATUS_SUCCESS;
+
+cleanup:
+	if (KeyHandle != NULL)
+		ZwClose(KeyHandle);
+	
+	if (ValueInfo != NULL)
+		ExFreePoolWithTag(ValueInfo, MODULE_TAG);
+
+	return Status;
+}
+
+NTSTATUS
+    MonitorStartInternal(PMONITOR Monitor, PKMON_INIT InitData)
 {
     NTSTATUS Status;
 
@@ -151,6 +225,28 @@ NTSTATUS
 		KeReleaseGuardedMutex(&Monitor->Mutex);
 		return STATUS_TOO_LATE;
 	}
+	InitData->clientId[KMON_MAX_CHARS - 1] = '\0';
+	InitData->authId[KMON_MAX_CHARS - 1] = '\0';
+
+	Monitor->clientId = CRtlCopyStr(InitData->clientId);
+	if (Monitor->clientId == NULL) {
+		KLog(LError, "setup clientId failed");
+		goto start_failed;
+	}
+
+	Monitor->authId = CRtlCopyStr(InitData->authId);
+	if (Monitor->authId == NULL) {
+		KLog(LError, "setup authId failed");
+		goto start_failed;
+	}
+	
+	Status = MonitorQueryHostIdWorker(Monitor);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "cant query host id");
+		goto start_failed;
+	}
+	
+	KLog(LInfo, "clientId=%s, authId=%s, hostId=%s", Monitor->clientId, Monitor->authId, Monitor->hostId);
 
 	JsonInit();
 	if (0 != sock_init()) {
@@ -235,13 +331,32 @@ start_failed:
 }
 
 NTSTATUS
-	MonitorStopInternal(PMONITOR Monitor)
+MonitorStopInternal(PMONITOR Monitor, PKMON_RELEASE ReleaseData)
 {
+	NTSTATUS Status;
+
 	KeAcquireGuardedMutex(&Monitor->Mutex);
 	if (Monitor->State == MONITOR_STATE_STOPPED) {
 		KLog(LError, "Monitor already stopped");
 		KeReleaseGuardedMutex(&Monitor->Mutex);
 		return STATUS_TOO_LATE;
+	}
+
+	if (ReleaseData != NULL) {
+		ReleaseData->clientId[KMON_MAX_CHARS - 1] = '\0';
+		ReleaseData->authId[KMON_MAX_CHARS - 1] = '\0';
+
+		if (strncmp(Monitor->clientId, ReleaseData->clientId, strlen(Monitor->clientId) + 1) != 0) {
+			KLog(LError, "clientId doesnt match");
+			Status = STATUS_ACCESS_DENIED;
+			goto unlock;
+		}
+
+		if (strncmp(Monitor->authId, ReleaseData->authId, strlen(Monitor->authId) + 1) != 0) {
+			KLog(LError, "authId doesnt match");
+			Status = STATUS_ACCESS_DENIED;
+			goto unlock;
+		}
 	}
 	/*
 	KbdStop(&Monitor->Kbd);
@@ -259,26 +374,43 @@ NTSTATUS
 		Monitor->WskContext = NULL;
 	}
 
+	if (Monitor->hostId != NULL) {
+		ExFreePool(Monitor->hostId);
+		Monitor->hostId = NULL;
+	}
+
+	if (Monitor->clientId != NULL) {
+		ExFreePool(Monitor->clientId);
+		Monitor->clientId = NULL;
+	}
+
+	if (Monitor->authId != NULL) {
+		ExFreePool(Monitor->authId);
+		Monitor->authId = NULL;
+	}
+
 	Monitor->State = MONITOR_STATE_STOPPED;
+
+unlock:
 	KeReleaseGuardedMutex(&Monitor->Mutex);
 
 	return STATUS_SUCCESS;
 }
 
 NTSTATUS
-    MonitorStart()
+    MonitorStart(PKMON_INIT InitData)
 {   
     KLog(LInfo, "MonitorStart");
 
-	return MonitorStartInternal(&g_Monitor);
+	return MonitorStartInternal(&g_Monitor, InitData);
 }
 
 NTSTATUS
-    MonitorStop()
+    MonitorStop(PKMON_RELEASE ReleaseData)
 {
     KLog(LInfo, "MonitorStop");
 
-    return MonitorStopInternal(&g_Monitor);
+	return MonitorStopInternal(&g_Monitor, ReleaseData);
 }
 
 VOID

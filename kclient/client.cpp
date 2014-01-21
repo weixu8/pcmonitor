@@ -5,7 +5,6 @@
 
 #define KMON_BINARY_W (L".\\"KMON_DRIVER_NAME_W)
 
-
 HANDLE COpenDriver()
 {
 
@@ -34,21 +33,28 @@ BOOL
 	return CloseHandle(hDevice);
 }
 
-DWORD NTAPI CDrvInit()
+DWORD NTAPI CDrvInit(char *clientId, char *authId)
 {
 	HANDLE hDevice = NULL;
 	DWORD BytesReturned;
 	DWORD Result = -1;
+	KMON_INIT InitData;
 
 	hDevice = COpenDriver();
 	if (hDevice == NULL) {
 		return -1;
 	}
 	
+	size_t authIdLen = strlen(authId) + 1;
+	memcpy(&InitData.authId, authId, (authIdLen > sizeof(InitData.authId)) ? sizeof(InitData.authId) : authIdLen);
+
+	size_t clientIddLen = strlen(clientId) + 1;
+	memcpy(&InitData.clientId, clientId, (clientIddLen > sizeof(InitData.clientId)) ? sizeof(InitData.clientId) : clientIddLen);
+
 	if( !DeviceIoControl(hDevice,
 		IOCTL_KMON_INIT,
-		NULL, 0,	// Input
-		NULL, 0,	// Output
+		&InitData, sizeof(InitData),	// Input
+		&InitData, sizeof(InitData),	// Output
 		&BytesReturned,
 		NULL )  )
 	{
@@ -63,21 +69,28 @@ DWORD NTAPI CDrvInit()
 	return Result;
 }
 
-DWORD NTAPI CDrvRelease()
+DWORD NTAPI CDrvRelease(char *clientId, char *authId)
 {
 	HANDLE hDevice = NULL;
 	DWORD BytesReturned;
 	DWORD Result = -1;
+	KMON_RELEASE ReleaseData;
 
 	hDevice = COpenDriver();
 	if (hDevice == NULL) {
 		return -1;
 	}
 
+	size_t authIdLen = strlen(authId) + 1;
+	memcpy(&ReleaseData.authId, authId, (authIdLen > sizeof(ReleaseData.authId)) ? sizeof(ReleaseData.authId) : authIdLen);
+
+	size_t clientIddLen = strlen(clientId) + 1;
+	memcpy(&ReleaseData.clientId, clientId, (clientIddLen > sizeof(ReleaseData.clientId)) ? sizeof(ReleaseData.clientId) : clientIddLen);
+
 	if( !DeviceIoControl(hDevice,
 		IOCTL_KMON_RELEASE,
-		NULL, 0,	// Input
-		NULL, 0,	// Output
+		&ReleaseData, sizeof(ReleaseData),
+		&ReleaseData, sizeof(ReleaseData),
 		&BytesReturned,
 		NULL )  )
 	{
@@ -190,7 +203,7 @@ DWORD NTAPI CStopDrv()
 }
 
 
-DWORD ClientDrvStart()
+DWORD ClientDrvStart(char *clientId, char *authId)
 {
 	if (CInstallDrv() == -1) {
 		return -1;
@@ -200,16 +213,16 @@ DWORD ClientDrvStart()
 		return -1;
 	}
 
-	if (CDrvInit() == -1) {
+	if (CDrvInit(clientId, authId) == -1) {
 		return -1;
 	}
 
 	return 0;
 }
 
-DWORD ClientDrvStop()
+DWORD ClientDrvStop(char *clientId, char *authId)
 {
-	CDrvRelease();
+	CDrvRelease(clientId, authId);
 	CStopDrv();
 	CRemoveDrv();
 	return 0;
