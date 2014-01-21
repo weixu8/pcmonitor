@@ -12,7 +12,7 @@
 #include <inc/processtable.h>
 #include <inc/servercon.h>
 #include <inc/srequest.h>
-
+#include <inc/eventlog.h>
 
 #define MONITOR_STATE_STOPPED 1
 #define MONITOR_STATE_STARTED 2
@@ -28,6 +28,7 @@ typedef struct _MONITOR {
 	PROCESS_TABLE	ProcessTable;
 	KBD_CONTEXT		Kbd;
 	SERVER_CON_POOL ConPool;
+	EVENT_LOG		EventLog;
 	char			*clientId;
 	char			*authId;
 	char			*hostId;

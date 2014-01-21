@@ -91,6 +91,7 @@
     <FilesToPackage Include="@(Inf->'%(CopyOutput)')" Condition="'@(Inf)'!=''" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="eventlog.c" />
     <ClCompile Include="json.c" />
     <ClCompile Include="driver.c" />
     <ClCompile Include="htable.c" />
@@ -112,6 +113,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="h\drvioctl.h" />
+    <ClInclude Include="inc\eventlog.h" />
     <ClInclude Include="inc\json.h" />
     <ClInclude Include="inc\basictypes.h" />
     <ClInclude Include="inc\drvmain.h" />

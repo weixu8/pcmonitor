@@ -289,6 +289,13 @@ NTSTATUS
 		for (Index = 0; Index < 100; Index++)
 			SysWorkerAddWork(&Monitor->RequestWorker, MonitorCallServerTestWorker, NULL);
 	}
+
+	Status = EventLogStart(&Monitor->EventLog);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "EventLogStart failed err=%x", Status);
+		goto start_failed;
+	}
+
 	/*
 	Status = InjectStart(&Monitor->Inject);
 	if (!NT_SUCCESS(Status)) {
@@ -314,7 +321,7 @@ start_failed:
 	SysWorkerStop(&Monitor->NetWorker);
 
 	ProcessTableStop(&Monitor->ProcessTable);
-
+	EventLogStop(&Monitor->EventLog);
 	ServerConPoolStop(&Monitor->ConPool);
 	sock_release();
 
@@ -364,8 +371,9 @@ MonitorStopInternal(PMONITOR Monitor, PKMON_RELEASE ReleaseData)
 	*/
 	SysWorkerStop(&Monitor->RequestWorker);
 	SysWorkerStop(&Monitor->NetWorker);
-
 	ProcessTableStop(&Monitor->ProcessTable);
+	EventLogStop(&Monitor->EventLog);
+
 	ServerConPoolStop(&Monitor->ConPool);
 	sock_release();
 
