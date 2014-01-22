@@ -2,13 +2,7 @@
 
 #include <inc/drvmain.h>
 #include <inc/sysworker.h>
-
-typedef struct _EVENT_ENTRY {
-	LIST_ENTRY	ListEntry;
-	int			type;
-	char		*data;
-	size_t		dataSz;
-} EVENT_ENTRY, *PEVENT_ENTRY;
+#include <inc/srequest.h>
 
 typedef struct _EVENT_LOG {
 	LIST_ENTRY		EventListHead;
@@ -24,3 +18,6 @@ EventLogStart(PEVENT_LOG EventLog);
 
 VOID
 EventLogStop(PEVENT_LOG EventLog);
+
+NTSTATUS
+EventLogAdd(PEVENT_LOG EventLog, PSREQUEST request);

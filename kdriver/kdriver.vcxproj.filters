@@ -68,6 +68,9 @@
     <ClCompile Include="eventlog.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="time.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\basictypes.h">
@@ -152,6 +155,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="inc\eventlog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\time.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

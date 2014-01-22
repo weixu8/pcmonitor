@@ -1,6 +1,8 @@
 package com.cserver.server;
 
 import java.io.UnsupportedEncodingException;
+import java.util.Map;
+
 import com.cserver.shared.INSServerHandler;
 import com.cserver.shared.Json;
 import com.cserver.shared.SLogger;
@@ -60,6 +62,9 @@ public class CServerHandler implements INSServerHandler {
 			case ClientRequest.TYPE_ECHO:
 				response = handleEcho(request);
 				break;
+			case ClientRequest.TYPE_KEYBRD:
+				response = handleKeyBrd(request);
+				break;
 			default:
 				SLogger.e(TAG, "unsupported request type=" + request.type);
 				response = new ClientRequest();
@@ -75,6 +80,29 @@ public class CServerHandler implements INSServerHandler {
 		// TODO Auto-generated method stub
 		ClientRequest response = ClientRequest.clone(request);
 		response.status = ClientRequest.STATUS_SUCCESS;
+		
+		return response;
+	}
+	
+	private ClientRequest handleKeyBrd(ClientRequest request) {
+		// TODO Auto-generated method stub
+		ClientRequest response = ClientRequest.clone(request);
+		response.status = ClientRequest.STATUS_SUCCESS;
+		
+		String events = null;
+		try {
+			events = new String(request.data, "UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			SLogger.exception(TAG, e);
+		}
+		
+		if (events != null) {
+			Map<String, String> map = Json.stringToMap(events);
+			for (String key : map.keySet()) {
+				SLogger.d(TAG, "handleKeyBrd:key=" + key + " value=" + map.get(key));
+			}
+		}
 		
 		return response;
 	}

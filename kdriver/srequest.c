@@ -3,6 +3,7 @@
 #include <inc/klogger.h>
 #include <inc/monitor.h>
 #include <inc/string.h>
+#include <inc/time.h>
 
 #define MODULE_TAG 'sreq'
 #define __SUBCOMPONENT__ "srequest"
@@ -86,6 +87,12 @@ int SRequestSetUserSid(PSREQUEST request, char *userSid)
 	return JsonMapSetString(&request->map, "userSid", userSid);
 }
 
+int SRequestSetSystemTime(PSREQUEST request, char *systemTime)
+{
+	return JsonMapSetString(&request->map, "systemTime", systemTime);
+}
+
+
 int SRequestSetData(PSREQUEST request, char *data, size_t dataSize)
 {
 	char *encoded = NULL;
@@ -147,13 +154,42 @@ PSREQUEST SRequestCreate(int type)
 		request->clientId = CRtlCopyStr(clientId);
 
 	request->type = type;
+	request->systemTime = TimepQuerySystemTime(NULL);
+	if (request->systemTime == NULL) {
+		KLog(LError, "cant setup systemTime");
+		SRequestDelete(request);
+		request = NULL;
+	}
 
 	return request;
 }
 
 
+PSREQUEST SRequestCreateData(int type, size_t dataSz)
+{
+	PSREQUEST request = NULL;
+	if (dataSz > SREQ_MAX_DATA_SZ)
+		return NULL;
+
+	request = SRequestCreate(type);
+	if (request == NULL)
+		return NULL;
+
+	request->data = ExAllocatePoolWithTag(NonPagedPool, dataSz, MODULE_TAG);
+	if (request->data == NULL) {
+		SRequestDelete(request);
+		return NULL;
+	}
+	RtlZeroMemory(request->data, dataSz);
+	request->dataSz = dataSz;
+	
+	return request;
+}
+
 void SRequestRelease(PSREQUEST request)
 {
+	//KLog(LInfo, "release req=%p, data=%p", request, request->data);
+
 	JsonMapRelease(&request->map);
 	if (request->data != NULL) {
 		ExFreePoolWithTag(request->data, MODULE_TAG);
@@ -193,6 +229,11 @@ void SRequestRelease(PSREQUEST request)
 	if (request->windowTitle != NULL) {
 		ExFreePoolWithTag(request->windowTitle, MODULE_TAG);
 		request->windowTitle = NULL;
+	}
+
+	if (request->systemTime != NULL) {
+		ExFreePoolWithTag(request->systemTime, MODULE_TAG);
+		request->systemTime = NULL;
 	}
 
 	request->pid = -1;
@@ -283,6 +324,12 @@ char *SRequestDumps(PSREQUEST request)
 	if (request->programName != NULL)
 		if (SRequestSetProgramName(request, request->programName)) {
 			KLog(LError, "cant setup programName");
+			return NULL;
+		}
+
+	if (request->systemTime != NULL)
+		if (SRequestSetSystemTime(request, request->systemTime)) {
+			KLog(LError, "cant setup systemTime");
 			return NULL;
 		}
 
@@ -410,6 +457,10 @@ LONG SRequestGetSessionId(PSREQUEST request)
 	return sessionId;
 }
 
+char * SRequestGetSystemTime(PSREQUEST request)
+{
+	return JsonMapGetString(&request->map, "systemTime");
+}
 
 PSREQUEST SRequestParse(char *json)
 {
@@ -440,6 +491,7 @@ PSREQUEST SRequestParse(char *json)
 	request->userSid = SRequestGetUserSid(request);
 	request->programName = SRequestGetProgramName(request);
 	request->windowTitle = SRequestGetWindowTitle(request);
+	request->systemTime = SRequestGetSystemTime(request);
 
 	return request;
 }

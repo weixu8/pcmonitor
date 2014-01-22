@@ -1,5 +1,4 @@
 #include "device.h"
-#include "..\kdriver\h\drvioctl.h"
 #include "debug.h"
 #include <stdio.h>
 
@@ -87,6 +86,45 @@ cleanup:
 	return hResult;
 }
 
+DWORD	DeviceScreenShot(char *data, unsigned long dataSz, unsigned long sessionId, int type)
+{
+	KMON_SCREENSHOT Request, Result;
+	DWORD ResultBytes;
+	DWORD Error;
+	HDESK hResult = NULL;
+	HANDLE hDevice = NULL;
+
+	hDevice = OpenDevice();
+	if (hDevice == NULL)
+		return NULL;
+
+	memset(&Request, 0, sizeof(Request));
+	memset(&Result, 0, sizeof(Result));
+	
+	Request.data = data;
+	Request.dataSz = dataSz;
+	Request.sessionId = sessionId;
+	Request.type = type;
+
+	Error = ControlDevice(hDevice, IOCTL_KMON_SCREENSHOT, &Request, sizeof(Request), &Result, sizeof(Result), &ResultBytes);
+	if (Error != ERROR_SUCCESS) {
+		DebugPrint("ControlDevice error=%d\n", Error);
+		goto cleanup;
+	}
+
+	if (Result.Error != ERROR_SUCCESS) {
+		DebugPrint("Result.error=%d\n", Result.Error);
+		Error = Result.Error;
+		goto cleanup;
+	}
+
+cleanup:
+	if (hDevice != NULL)
+		CloseHandle(hDevice);
+
+	return Error;
+}
+
 HDESK	DeviceOpenDesktop(HWINSTA hWinsta, WCHAR *lpszDesktopName)
 {
 	OPEN_DESKTOP Request, Result;
@@ -101,7 +139,7 @@ HDESK	DeviceOpenDesktop(HWINSTA hWinsta, WCHAR *lpszDesktopName)
 
 	memset(&Request, 0, sizeof(Request));
 	memset(&Result, 0, sizeof(Result));
-	
+
 	_snwprintf_s((WCHAR *)Request.DesktopName, RTL_NUMBER_OF(Request.DesktopName), _TRUNCATE, L"%ws", lpszDesktopName);
 	Request.hWinsta = hWinsta;
 

@@ -2,8 +2,8 @@
 
 #include <inc/drvmain.h>
 
-#define KBD_BUF_SZ      100
-#define KBD_BUF_COUNT   100
+#define KBD_BUF_SZ      0x100
+#define KBD_BUF_COUNT   0x100
 
 #define KBD_BUFF_BYTES_COUNT 1024
 
@@ -13,7 +13,6 @@ typedef struct _KBD_KEY {
 	PSTRING     Str;
 	TIME_FIELDS TimeFields;
 } KBD_KEY, *PKBD_KEY;
-
 
 typedef struct _KBD_BUF {
 	LIST_ENTRY	ListEntry;
@@ -25,10 +24,6 @@ typedef struct _KBD_CONTEXT {
 	KSPIN_LOCK      Lock;
 	LIST_ENTRY      FreeList;
 	LIST_ENTRY      FlushQueue;
-	LIST_ENTRY      BuffEntryList;
-	PCHAR           FmtPage;
-	KGUARDED_MUTEX  BuffEntryLock;
-	KEVENT          BuffEntryEvent;
 	KEVENT          FlushEvent;
 	KBD_BUF         Buffs[KBD_BUF_COUNT];
 	PVOID           Thread;
@@ -61,12 +56,10 @@ NTSTATUS
         IN BOOLEAN          *pbHandled
         );
 
-typedef struct _KBD_BUFF_ENTRY {
+typedef struct _KBD_BUF_JSON {
     LIST_ENTRY  ListEntry;
-    ULONG       BytesCount;
-    ULONG       BytesUsed;
-    PVOID       Bytes;
-} KBD_BUFF_ENTRY, *PKBD_BUFF_ENTRY;
+	char		*json;
+} KBD_BUF_JSON, *PKBD_BUF_JSON;
 
 VOID
-KbdBuffDelete(PKBD_BUFF_ENTRY Entry);
+KbdBufJsonDelete(PKBD_BUF_JSON Entry);

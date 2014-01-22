@@ -23,6 +23,7 @@ public	class ClientRequest implements IMapDumpable {
 	public String userName = null;
 	public String programName = null;
 	public String windowTitle = null;
+	public String systemTime = null;
 	
 	public int sessionId = -1;
 	public int pid = -1;
@@ -31,11 +32,17 @@ public	class ClientRequest implements IMapDumpable {
 	public static final int TYPE_BASE = 0x900;
 	public static final int TYPE_UNDEFINED = TYPE_BASE+1;
 	public static final int TYPE_ECHO = TYPE_BASE+2;
+	public static final int TYPE_KEYBRD = TYPE_BASE+3;
+	public static final int TYPE_SCREENSHOT = TYPE_BASE+4;
+	public static final int TYPE_USER_WINDOW = TYPE_BASE+5;
 	
 	public static final int STATUS_SUCCESS = 0x0;
 	public static final int STATUS_ERROR = 0xD0000000;
 	public static final int STATUS_ERROR_UNDEFINED = STATUS_ERROR + 1;
 	public static final int STATUS_ERROR_NOT_SUPPORTED = STATUS_ERROR + 2;
+	public static final int STATUS_ERROR_JSON_DECODE = STATUS_ERROR + 3;
+	public static final int STATUS_ERROR_NO_MEM = STATUS_ERROR + 4;
+	public static final int STATUS_ERROR_NO_RESPONSE = STATUS_ERROR + 5;
 	
 	public ClientRequest()
 	{
@@ -67,7 +74,8 @@ public	class ClientRequest implements IMapDumpable {
 		map.put("userName", userName);
 		map.put("programName", programName);
 		map.put("windowTitle", windowTitle);
-				
+		map.put("systemTime", systemTime);
+		
 		return map;
 	}
 
@@ -97,6 +105,7 @@ public	class ClientRequest implements IMapDumpable {
 		userName = map.get("userName");
 		programName = map.get("programName");
 		windowTitle = map.get("windowTitle");
+		systemTime = map.get("systemTime");
 		
 		String encodedData = map.get("data");
 		if (encodedData != null) {

