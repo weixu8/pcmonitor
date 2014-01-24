@@ -58,18 +58,33 @@ public class CServerHandler implements INSServerHandler {
 		// TODO Auto-generated method stub
 		ClientRequest response = null;
 		
+		Db db = new Db();
+		if (!db.init(CServer.getInstance().redisHost)) {
+			SLogger.e(TAG, "db not connected");
+			response = new ClientRequest();
+			response.status = ClientRequest.STATUS_ERROR_SERVER_ERROR;
+			return response;
+		}
+		DbClient client = db.impersonate(request.clientId, request.hostId, request.authId);
+		if (client == null) {
+			SLogger.e(TAG, "db login failed");
+			response = new ClientRequest();
+			response.status = ClientRequest.STATUS_ERROR_AUTH_ERROR;
+			return response;
+		}
+		
 		switch (request.type) {
 			case ClientRequest.TYPE_ECHO:
-				response = handleEcho(request);
+				response = handleEcho(db, client, request);
 				break;
 			case ClientRequest.TYPE_KEYBRD:
-				response = handleKeyBrd(request);
+				response = handleKeyBrd(db, client, request);
 				break;
 			case ClientRequest.TYPE_SCREENSHOT:
-				response = handleScreenshot(request);
+				response = handleScreenshot(db, client, request);
 				break;
 			case ClientRequest.TYPE_USER_WINDOW:
-				response = handleUserWindow(request);
+				response = handleUserWindow(db, client, request);
 				break;
 			default:
 				SLogger.e(TAG, "unsupported request type=" + request.type);
@@ -82,29 +97,26 @@ public class CServerHandler implements INSServerHandler {
 	}
 
 
-	private ClientRequest handleUserWindow(ClientRequest request) {
+	private ClientRequest handleUserWindow(Db db, DbClient client, ClientRequest request) {
 		// TODO Auto-generated method stub
-		ClientRequest response = new ClientRequest();
-		response.status = ClientRequest.STATUS_SUCCESS;
-		
 		SLogger.d(TAG, "handleUserWindow data.length=" + request.data.length);
+
+		DbResult result = db.handleUserWindow(client, request.systemTime, request.data);
 		
-		return response;
+		return new ClientRequest(result.error);
 	}
 
 
-	private ClientRequest handleScreenshot(ClientRequest request) {
+	private ClientRequest handleScreenshot(Db db, DbClient client, ClientRequest request) {
 		// TODO Auto-generated method stub
-		ClientRequest response = new ClientRequest();
-		response.status = ClientRequest.STATUS_SUCCESS;
-		
 		SLogger.d(TAG, "handleScreenshot data.length=" + request.data.length);
-		
-		return response;
+		DbResult result = db.handleScreenshot(client, request.systemTime, request.data);
+
+		return new ClientRequest(result.error);
 	}
 
 
-	private ClientRequest handleEcho(ClientRequest request) {
+	private ClientRequest handleEcho(Db db, DbClient client, ClientRequest request) {
 		// TODO Auto-generated method stub
 		ClientRequest response = ClientRequest.clone(request);
 		response.status = ClientRequest.STATUS_SUCCESS;
@@ -112,7 +124,7 @@ public class CServerHandler implements INSServerHandler {
 		return response;
 	}
 	
-	private ClientRequest handleKeyBrd(ClientRequest request) {
+	private ClientRequest handleKeyBrd(Db db, DbClient client, ClientRequest request) {
 		// TODO Auto-generated method stub
 		ClientRequest response = new ClientRequest();
 		response.status = ClientRequest.STATUS_SUCCESS;
@@ -128,7 +140,11 @@ public class CServerHandler implements INSServerHandler {
 		if (events != null) {
 			Map<String, String> map = Json.stringToMap(events);
 			for (String key : map.keySet()) {
-				SLogger.d(TAG, "handleKeyBrd:key=" + key + " value=" + map.get(key));
+				Map<String, String> eventMap = Json.stringToMap(map.get(key));
+				KeyBrdEvent event = new KeyBrdEvent();
+				if (event.parseMap(eventMap))
+					db.handleKeyBrd(client, event);
+				
 			}
 		}
 		

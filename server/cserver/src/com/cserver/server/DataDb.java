@@ -7,52 +7,61 @@ import java.util.Map;
 
 import com.cserver.shared.FileLock;
 import com.cserver.shared.FileOps;
+import com.cserver.shared.SLogger;
 
 public class DataDb {
 
 	private static final String TAG = "DataDb";
 	private File dbPath = null;
 	private int numCachedObjs = 100;
-	private String dbPrefix = null;
 	private static volatile Map<String, DataDb> instanceMap = new HashMap<String, DataDb>();
 	private JCache cache = null;
-	public static final int MAX_DATA_LENGTH_TO_CACHE = 512;
+	private int cacheDataLengthLimit = 0;
+	private String fileExt = "";
 	
-	public DataDb(File dbPath, String dbPrefix, int numCachedObjs) {
+	public DataDb(File dbPath, int numCachedObjs, int cacheDataLengthLimit, String fileExt) {
 		this.dbPath = dbPath;
 		this.numCachedObjs = numCachedObjs;
-		this.dbPrefix = dbPrefix;
 		this.cache = new JCache(this.numCachedObjs);
+		
+		if (fileExt != null && !fileExt.isEmpty())
+			this.fileExt = fileExt;
+		
+		if (!dbPath.exists())
+			dbPath.mkdir();
+		
+		//SLogger.d(TAG, "dbPath=" + dbPath.getAbsolutePath());
+		
+		this.cacheDataLengthLimit = cacheDataLengthLimit;
 	}
 	
-	public static DataDb getInstance(File dbPath, String dbPrefix, int numCachedObjs) {
+	public static DataDb getInstance(File dbPath, int numCachedObjs, int cacheDataLengthLimit, String fileExt) {
 		DataDb db = null;
 		synchronized(DataDb.class) {
-			db = instanceMap.get(dbPrefix);
+			db = instanceMap.get(dbPath.getAbsolutePath());
 			if (db == null) {
-				db = new DataDb(dbPath, dbPrefix, numCachedObjs);
+				db = new DataDb(dbPath, numCachedObjs, cacheDataLengthLimit, fileExt);
 			}
 		}
 		return db;
 	}
 	
 	private File getDbDir() {
-		File dbDir = new File(dbPath, dbPrefix);
-		if (!dbDir.exists()) {
-			dbDir.mkdir();
+		if (!dbPath.exists()) {
+			dbPath.mkdir();
 		}
 		
-		return dbDir;
+		return dbPath;
 	}
 
-	private String makeUUID(long uid, long id) {
-		return "dbo_" + Long.toHexString(uid) + "_" + Long.toHexString(id);
+	private String makeUUID(String uid, long id) {
+		return "obj_" + uid + "_" + Long.toHexString(id);
 	}
 	
-	public boolean put(long uid, long id, byte[] data) {	
+	public boolean put(String uid, long id, byte[] data) {	
 		String uuid = makeUUID(uid, id);
 		
-		File dataFile = new File(getDbDir(), uuid);
+		File dataFile = getObjectFile(uuid);
 		boolean result = false;
 		
 		FileLock flock = FileLock.getFileLock(dataFile.getAbsolutePath());
@@ -61,13 +70,13 @@ public class DataDb {
 		
 		FileLock.releaseFileLock(flock);
 		
-		if (result && data.length < MAX_DATA_LENGTH_TO_CACHE)
+		if (result && data.length <= cacheDataLengthLimit)
 			cache.put(uuid, data);
 		
 		return result;
 	}
 	
-	public byte[] get(long uid, long id) {
+	public byte[] get(String uid, long id) {
 		String uuid = makeUUID(uid, id);
 		byte[] result = null;
 		
@@ -75,7 +84,7 @@ public class DataDb {
 		if (result != null)
 			return result;
 		
-		File dataFile = new File(getDbDir(), uuid);
+		File dataFile = getObjectFile(uuid);
 		
 		FileLock flock = FileLock.getFileLock(dataFile.getAbsolutePath());
 		
@@ -87,11 +96,15 @@ public class DataDb {
 
 	}
 	
-	public void delete(long uid, long id) {
+	public File getObjectFile(String uuid) {
+		return new File(getDbDir(), uuid + "_" + fileExt);
+	}
+	
+	public void delete(String uid, long id) {
 		String uuid = makeUUID(uid, id);
 		cache.delete(uuid);
 		
-		File dataFile = new File(getDbDir(), uuid);
+		File dataFile = getObjectFile(uuid);
 	
 		FileLock flock = FileLock.getFileLock(dataFile.getAbsolutePath());
 		

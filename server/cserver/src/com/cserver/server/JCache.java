@@ -14,7 +14,6 @@ public class JCache {
 	private int numObjects = 0;
 	
 	private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
-	private final Lock readLock  = rwLock.readLock();
 	private final Lock writeLock = rwLock.writeLock();
 	
 	public JCache(int numObjects) {

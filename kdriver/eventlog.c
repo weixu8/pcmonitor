@@ -2,6 +2,9 @@
 #include <inc/srequest.h>
 #include <inc/monitor.h>
 
+
+#define __SUBCOMPONENT__ "eventlog"
+
 VOID
 	EventLogFlush(PEVENT_LOG EventLog)
 {
@@ -47,6 +50,9 @@ NTSTATUS
 	if (request != NULL) {
 		PSREQUEST response = NULL;
 		response = MonitorCallServer(request);
+		if (response->status != SREQ_SUCCESS)
+			KLog(LError, "request %d failed with err=%d", request->type, response->status);
+
 		if (response != NULL)
 			SRequestDelete(response);
 

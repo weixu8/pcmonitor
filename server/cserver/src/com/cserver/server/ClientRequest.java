@@ -43,11 +43,21 @@ public	class ClientRequest implements IMapDumpable {
 	public static final int STATUS_ERROR_JSON_DECODE = STATUS_ERROR + 3;
 	public static final int STATUS_ERROR_NO_MEM = STATUS_ERROR + 4;
 	public static final int STATUS_ERROR_NO_RESPONSE = STATUS_ERROR + 5;
+	public static final int STATUS_ERROR_SERVER_ERROR = STATUS_ERROR + 6;
+	public static final int STATUS_ERROR_AUTH_ERROR = STATUS_ERROR + 7;
+	public static final int STATUS_ERROR_ACCESS_DENIED = STATUS_ERROR + 8;
 	
 	public ClientRequest()
 	{
 		type = TYPE_UNDEFINED;
 		status = STATUS_ERROR_UNDEFINED;
+		data = null;
+	}
+	
+	public ClientRequest(int status)
+	{
+		type = TYPE_UNDEFINED;
+		status = status;
 		data = null;
 	}
 	
