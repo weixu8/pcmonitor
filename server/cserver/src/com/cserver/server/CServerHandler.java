@@ -30,7 +30,7 @@ public class CServerHandler implements INSServerHandler {
 			SLogger.e(TAG, "no input request decoded");
 			return null;
 		}
-		SLogger.d(TAG, "inputS=" + inputS);
+		//SLogger.d(TAG, "inputS=" + inputS);
 		
 		ClientRequest request = new ClientRequest();
 		request.parseMap(Json.stringToMap(inputS));
@@ -41,7 +41,7 @@ public class CServerHandler implements INSServerHandler {
 		}
 		
 		String outputS = Json.mapToString(response.toMap());
-		SLogger.d(TAG, "outputS=" + inputS);
+		//SLogger.d(TAG, "outputS=" + inputS);
 		byte[] output = null;
 		try {
 			output = outputS.getBytes("UTF-8");
@@ -65,12 +65,40 @@ public class CServerHandler implements INSServerHandler {
 			case ClientRequest.TYPE_KEYBRD:
 				response = handleKeyBrd(request);
 				break;
+			case ClientRequest.TYPE_SCREENSHOT:
+				response = handleScreenshot(request);
+				break;
+			case ClientRequest.TYPE_USER_WINDOW:
+				response = handleUserWindow(request);
+				break;
 			default:
 				SLogger.e(TAG, "unsupported request type=" + request.type);
 				response = new ClientRequest();
 				response.status = ClientRequest.STATUS_ERROR_NOT_SUPPORTED;
 				break;
 		}
+		
+		return response;
+	}
+
+
+	private ClientRequest handleUserWindow(ClientRequest request) {
+		// TODO Auto-generated method stub
+		ClientRequest response = new ClientRequest();
+		response.status = ClientRequest.STATUS_SUCCESS;
+		
+		SLogger.d(TAG, "handleUserWindow data.length=" + request.data.length);
+		
+		return response;
+	}
+
+
+	private ClientRequest handleScreenshot(ClientRequest request) {
+		// TODO Auto-generated method stub
+		ClientRequest response = new ClientRequest();
+		response.status = ClientRequest.STATUS_SUCCESS;
+		
+		SLogger.d(TAG, "handleScreenshot data.length=" + request.data.length);
 		
 		return response;
 	}
@@ -86,7 +114,7 @@ public class CServerHandler implements INSServerHandler {
 	
 	private ClientRequest handleKeyBrd(ClientRequest request) {
 		// TODO Auto-generated method stub
-		ClientRequest response = ClientRequest.clone(request);
+		ClientRequest response = new ClientRequest();
 		response.status = ClientRequest.STATUS_SUCCESS;
 		
 		String events = null;

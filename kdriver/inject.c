@@ -60,7 +60,15 @@ InjectApcKernelRoutine(
 
 	KLog(LInfo, "InjectApcKernelRoutine");
 
-	ExFreePool(Apc);
+	ExFreePoolWithTag(Apc, MODULE_TAG);
+}
+
+VOID
+InjectApcRundown(IN PKAPC Apc)
+{
+	KLog(LInfo, "InjectApcRundown");
+
+	ExFreePoolWithTag(Apc, MODULE_TAG);
 }
 
 NTSTATUS
@@ -81,7 +89,7 @@ NTSTATUS
 		Thread,
 		OriginalApcEnvironment,
 		InjectApcKernelRoutine,
-		NULL,
+		InjectApcRundown,
 		(PVOID)(stubStart + sizeof(STUB_DATA)),
 		UserMode,
 		NULL);
@@ -95,13 +103,16 @@ NTSTATUS
 			break;
 		}
 
-		KLog(LInfo, "KeInsertQueueApc failed index=%x", Index);
+		KLog(LError, "KeInsertQueueApc failed index=%x", Index);
 
 		RtlZeroMemory(&Timeout, sizeof(Timeout));
 		Timeout.QuadPart = -20*1000*10;//20ms
 
 		KeDelayExecutionThread(KernelMode, FALSE, &Timeout);
 	}
+	
+	if (!ApcQueued)
+		ExFreePoolWithTag(Apc, MODULE_TAG);
 
 	return (ApcQueued) ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
 }

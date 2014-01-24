@@ -250,24 +250,34 @@ connect_failed:
 
 int ServerConWrite(PSERVER_CON Con, const unsigned char *buf, int bufLen) {
 	int ret;
+	int offset = 0;
 
-	ret = ssl_write(&Con->ssl, buf, bufLen);
-	if (ret < 0) {
-		KLog(LError, "ssl_write failed err=%x\n", ret);
+	while (offset < bufLen) {
+		ret = ssl_write(&Con->ssl, buf + offset, bufLen - offset);
+		if (ret <= 0) {
+			KLog(LError, "ssl_write failed err=%x\n", ret);
+			break;
+		}
+		offset += ret;
 	}
 
-	return ret;
+	return offset;
 }
 
 int ServerConRead(PSERVER_CON Con, unsigned char *buf, int bufLen) {
 	int ret;
+	int offset = 0;
 
-	ret = ssl_read(&Con->ssl, buf, bufLen);
-	if (ret < 0) {
-		KLog(LError, "ssl_read failed err=%x\n", ret);
+	while (offset < bufLen) {
+		ret = ssl_read(&Con->ssl, buf + offset, bufLen - offset);
+		if (ret <= 0) {
+			KLog(LError, "ssl_read failed err=%x\n", ret);
+			break;
+		}
+		offset += ret;
 	}
 
-	return ret;
+	return offset;
 }
 
 NTSTATUS

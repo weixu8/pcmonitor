@@ -91,7 +91,6 @@ DWORD	DeviceScreenShot(char *data, unsigned long dataSz, unsigned long sessionId
 	KMON_SCREENSHOT Request, Result;
 	DWORD ResultBytes;
 	DWORD Error;
-	HDESK hResult = NULL;
 	HANDLE hDevice = NULL;
 
 	hDevice = OpenDevice();
@@ -112,9 +111,9 @@ DWORD	DeviceScreenShot(char *data, unsigned long dataSz, unsigned long sessionId
 		goto cleanup;
 	}
 
-	if (Result.Error != ERROR_SUCCESS) {
-		DebugPrint("Result.error=%d\n", Result.Error);
-		Error = Result.Error;
+	Error = Result.Error;
+	if (Error != ERROR_SUCCESS) {
+		DebugPrint("Result.error=%d\n", Error);
 		goto cleanup;
 	}
 
