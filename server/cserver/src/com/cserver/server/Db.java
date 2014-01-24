@@ -93,7 +93,7 @@ public class Db {
 	{	
 		long picId = jedis.incr("picId");
 		
-		if (!client.picsDb.put("", picId, data)) {
+		if (!client.picsDb.put("screen", picId, data)) {
 			SLogger.e(TAG, "put failed");
 			return new DbResult(ClientRequest.STATUS_ERROR_SERVER_ERROR);
 		}
@@ -108,7 +108,7 @@ public class Db {
 	{	
 		long picId = jedis.incr("picId");
 		
-		if (!client.picsDb.put("", picId, data)) {
+		if (!client.picsDb.put("userwindow", picId, data)) {
 			SLogger.e(TAG, "put failed");
 			return new DbResult(ClientRequest.STATUS_ERROR_SERVER_ERROR);
 		}
