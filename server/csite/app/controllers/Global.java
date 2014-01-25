@@ -4,18 +4,25 @@ import play.*;
 import play.mvc.Action;
 import play.mvc.Http.Request;
 import java.lang.reflect.Method;
-import java.util.Map;
 
 public class Global extends GlobalSettings {
 	
     public Action onRequest(Request request, Method actionMethod) {
-    	System.out.println("request=" + request.toString());
-    	Map<String, String[]> headers = request.headers();
-    	for (String key : headers.keySet()) {
-    		System.out.println("header[" + key + "]=" + JsonHelper.stringArrToJson(headers.get(key)));
-    	}
+    	System.out.println("request=" + request.toString() + " headers=" + JsonHelper.mapStoSArrToJson(request.headers()));
 
     	return super.onRequest(request, actionMethod);
+    }
+    
+    public void onStart(play.Application app) {
+      Logger.info("Application has started");
+      System.out.println("Application has started");
+      super.onStart(app);
+    }  
+
+    public void onStop(play.Application app) {
+      Logger.info("Application shutdown...");
+      System.out.println("Application shutdown ...");
+      super.onStop(app);
     }
     
 }

@@ -30,6 +30,15 @@ public class Application extends Controller {
     	
     	Map<String, String> map = JsonHelper.jsonToMap(json);
     	System.out.println("email=" + map.get("email") + " pass=" + map.get("pass"));
-    	return internalServerError(h500.render());
+    	return redirect("/login");
+    }
+        
+    public static Result doJoin() {
+    	String json = request().body().asJson().toString();
+    	
+    	Map<String, String> map = JsonHelper.jsonToMap(json);
+    	System.out.println("email=" + map.get("email") + " pass=" + map.get("pass") + " passCopy=" + map.get("passCopy"));
+    	
+    	return redirect("/join");
     }
 }
