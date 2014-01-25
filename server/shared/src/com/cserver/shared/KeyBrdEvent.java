@@ -1,9 +1,8 @@
-package com.cserver.server;
+package com.cserver.shared;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import com.cserver.shared.IMapDumpable;
 
 public class KeyBrdEvent implements IMapDumpable {
 	public int makeCode = -1;

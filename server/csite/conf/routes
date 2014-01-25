@@ -9,6 +9,6 @@ GET     /login                   	controllers.Application.login
 GET     /join                   	controllers.Application.join
 POST	/login						controllers.Application.doLogin
 POST	/join						controllers.Application.doJoin
-
+GET		/profile 					controllers.Application.profile
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)

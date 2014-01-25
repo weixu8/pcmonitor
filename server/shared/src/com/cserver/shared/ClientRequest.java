@@ -1,12 +1,8 @@
-package com.cserver.server;
+package com.cserver.shared;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import com.cserver.shared.Base64;
-import com.cserver.shared.Base64DecoderException;
-import com.cserver.shared.IMapDumpable;
-import com.cserver.shared.SLogger;
 
 
 public	class ClientRequest implements IMapDumpable {
@@ -37,16 +33,16 @@ public	class ClientRequest implements IMapDumpable {
 	public static final int TYPE_USER_WINDOW = TYPE_BASE+5;
 	
 	public static final int STATUS_SUCCESS = 0x0;
-	public static final int STATUS_ERROR = 0xD0000000;
-	public static final int STATUS_ERROR_UNDEFINED = STATUS_ERROR + 1;
-	public static final int STATUS_ERROR_NOT_SUPPORTED = STATUS_ERROR + 2;
-	public static final int STATUS_ERROR_JSON_DECODE = STATUS_ERROR + 3;
-	public static final int STATUS_ERROR_NO_MEM = STATUS_ERROR + 4;
-	public static final int STATUS_ERROR_NO_RESPONSE = STATUS_ERROR + 5;
-	public static final int STATUS_ERROR_SERVER_ERROR = STATUS_ERROR + 6;
-	public static final int STATUS_ERROR_AUTH_ERROR = STATUS_ERROR + 7;
-	public static final int STATUS_ERROR_ACCESS_DENIED = STATUS_ERROR + 8;
-	
+    public static final int STATUS_ERROR = 0xD0000000;
+    public static final int STATUS_ERROR_UNDEFINED = STATUS_ERROR + 1;
+    public static final int STATUS_ERROR_NOT_SUPPORTED = STATUS_ERROR + 2;
+    public static final int STATUS_ERROR_JSON_DECODE = STATUS_ERROR + 3;
+    public static final int STATUS_ERROR_NO_MEM = STATUS_ERROR + 4;
+    public static final int STATUS_ERROR_NO_RESPONSE = STATUS_ERROR + 5;
+    public static final int STATUS_ERROR_SERVER_ERROR = STATUS_ERROR + 6;
+    public static final int STATUS_ERROR_AUTH_ERROR = STATUS_ERROR + 7;
+    public static final int STATUS_ERROR_ACCESS_DENIED = STATUS_ERROR + 8;
+    
 	public ClientRequest()
 	{
 		type = TYPE_UNDEFINED;

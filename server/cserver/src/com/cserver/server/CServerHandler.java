@@ -3,8 +3,13 @@ package com.cserver.server;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
 
+import com.cserver.shared.ClientRequest;
+import com.cserver.shared.Db;
+import com.cserver.shared.DbClient;
+import com.cserver.shared.DbResult;
 import com.cserver.shared.INSServerHandler;
 import com.cserver.shared.Json;
+import com.cserver.shared.KeyBrdEvent;
 import com.cserver.shared.SLogger;
 
 public class CServerHandler implements INSServerHandler {
@@ -58,13 +63,14 @@ public class CServerHandler implements INSServerHandler {
 		// TODO Auto-generated method stub
 		ClientRequest response = null;
 		
-		Db db = new Db();
-		if (!db.init(CServer.getInstance().redisHost)) {
+		Db db = Db.getInstance(CServer.getInstance());
+		if (db == null) {
 			SLogger.e(TAG, "db not connected");
 			response = new ClientRequest();
 			response.status = ClientRequest.STATUS_ERROR_SERVER_ERROR;
 			return response;
 		}
+		
 		DbClient client = db.impersonate(request.clientId, request.hostId, request.authId);
 		if (client == null) {
 			SLogger.e(TAG, "db login failed");

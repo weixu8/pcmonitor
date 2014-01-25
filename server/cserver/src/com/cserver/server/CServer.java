@@ -6,17 +6,18 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import com.cserver.shared.DataCrypt;
+import com.cserver.shared.Db;
 import com.cserver.shared.FileCache;
+import com.cserver.shared.IDbEnv;
 import com.cserver.shared.Json;
 import com.cserver.shared.MessageCrypt;
 import com.cserver.shared.NSServer;
 import com.cserver.shared.SLogger;
 
-public class CServer {
+public class CServer implements IDbEnv {
 	private static final String TAG = "CServer";
 	private static volatile CServer instance = null;
 	public FileCache fileCache = null;
-	public Db db = null;
 	public String path = null;
     public String base64EncodedAppPublicKey = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAkAuIp3OBZaiaqAtWgQ4Qru9ilgWUz6eKyp0q6BEa1MJjZ6G1IWcNPG3rVW9Ss/O7KdddjeG/oMHD9FW5n9hvXOQuzejJp5vhaQ3Rd5S0cvpEMdkGVkQjBa2/m1D7Ums5/ov2Ntb7809U/ZpsCplw+5X1zf/d9xvADqBRAb2ZRuVKPAuQaB7lveNcgUKlpVKo1CnkEPyGxjQ1sK/WrB2eNkezqsBAT+AauRkBRrnhDws2ZL4G56l1vNOmqHz78XwZQlIVHSLbiQQEvLi+FJTsho6yKQDuJtBwxAwxg3tboL+j9TRl3SeXgwtf1ZBvlg5HQXll6z4xgxgsvafV2di9KwIDAQAB";
     public String redisHost = null;
@@ -59,8 +60,9 @@ public class CServer {
 		execService = Executors.newScheduledThreadPool(16);
 		dbExpireExecService = Executors.newScheduledThreadPool(16);
 		
-		db = new Db();
-		if (!db.init(this.redisHost)) {
+		
+		Db db = Db.getInstance(this);
+		if (db == null) {
 			shutdown();
 			return false;
 		}
@@ -126,4 +128,16 @@ public class CServer {
     	//new NSServer(conf.httpPort).run(new CServerHandler(), null, null, null);
 
     }
+
+	@Override
+	public String getRedisHost() {
+		// TODO Auto-generated method stub
+		return redisHost;
+	}
+
+	@Override
+	public String getWrkPath() {
+		// TODO Auto-generated method stub
+		return wrkPathFile.getAbsolutePath();
+	}
 }

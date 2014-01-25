@@ -1,13 +1,10 @@
-package com.cserver.server;
+package com.cserver.shared;
 
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
 
-import com.cserver.shared.FileLock;
-import com.cserver.shared.FileOps;
-import com.cserver.shared.SLogger;
 
 public class DataDb {
 

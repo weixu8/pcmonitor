@@ -1,3 +1,4 @@
+@(error: String)
 @base("Join"){
     <script>
 		// Attach a submit handler to the form
@@ -36,6 +37,9 @@
         <input type="password" class="form-control" placeholder="Password" name="pass" required>
         <input type="password" class="form-control" placeholder="Password again" name="passCopy" required>
         <button class="btn btn-lg btn-primary btn-block" type="submit">Join</button>
+        @if(!error.isEmpty()) {
+	  		<p>@error</p>
+	  	}
       </form>
 
     </div> <!-- /container -->

@@ -1,3 +1,4 @@
+@(error: String)
 @base("Log In") {
 
     <script>
@@ -34,6 +35,10 @@
 	    <input type="text" class="form-control" placeholder="Email address" name="email" required autofocus>
 	    <input type="password" class="form-control" placeholder="Password" name="pass" required>
 	    <button class="btn btn-lg btn-primary btn-block" type="submit">Log In</button>
+	  	@if(!error.isEmpty()) {
+	  		<p>@error</p>
+	  	}
+	  	
 	  </form>
     </div> <!-- /container -->
 }

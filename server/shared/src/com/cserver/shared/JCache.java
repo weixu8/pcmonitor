@@ -1,11 +1,10 @@
-package com.cserver.server;
+package com.cserver.shared;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.cserver.shared.SLogger;
 
 public class JCache {
 	private static final String TAG = "JCache";

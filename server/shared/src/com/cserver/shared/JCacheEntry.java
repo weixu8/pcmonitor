@@ -1,4 +1,4 @@
-package com.cserver.server;
+package com.cserver.shared;
 
 public class JCacheEntry {
 	public String id = null;

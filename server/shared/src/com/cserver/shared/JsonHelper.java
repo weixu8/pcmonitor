@@ -17,10 +17,23 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-public class Json {
+public class JsonHelper {
 	private static final String TAG = "Json";
 	private static Gson gson = new Gson();
 	
+	
+	public static String stringArrToJson(String[] arr) {
+		return gson.toJson(arr);
+	}
+	
+	public static String[] jsonToStringArr(String json) {
+		String[] arr = new Gson().fromJson(json, new TypeToken<String[]>(){}.getType());
+		return arr;
+	}
+		
+	public static String mapStringToStringArrToJson(Map<String, String[]> map) {
+		return gson.toJson(map);
+	}
 	
 	public static String mapLLToString(Map<Long, Long> map) {
 		return gson.toJson(map);
@@ -178,28 +191,6 @@ public class Json {
 	public static String bytesToString(byte [] bytes) {
 		return Base64.encode(bytes);
 	}
-	
-	public static String userInfoListToString(List<UserInfo> users) {
-		List<String> list = new ArrayList<String>();
-		for (UserInfo user : users) {
-			list.add(mapToString(user.toMap()));
-		}
-		return stringListToString(list);
-	}
-	
-	public static List<UserInfo> stringToUserInfoList(String json) {
-		List<String> list = stringToStringList(json);
-		List<UserInfo> userInfoList = new ArrayList<UserInfo>();
-		
-		for (String s : list) {
-			UserInfo userInfo = new UserInfo();
-			userInfo.parseMap(stringToMap(s));
-			userInfoList.add(userInfo);
-		}
-		
-		return userInfoList;
-	}
-	
 	
 	public static String messageInfoListToString(List<MessageInfo> msgs) {
 		List<String> list = new ArrayList<String>();

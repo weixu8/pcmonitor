@@ -1,4 +1,4 @@
-name := "monsite"
+name := "csite"
 
 version := "1.0-SNAPSHOT"
 

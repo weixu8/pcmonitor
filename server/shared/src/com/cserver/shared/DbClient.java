@@ -1,8 +1,6 @@
-package com.cserver.server;
+package com.cserver.shared;
 
 import java.io.File;
-
-import com.cserver.shared.SLogger;
 
 public class DbClient {
 	private static final String TAG = "DbClient";
@@ -13,13 +11,13 @@ public class DbClient {
 	public File hostPath = null;
 	public String hostUID = null;
 	
-	public DbClient(String clientId, String hostId) {
+	public DbClient(String dbRoot, String clientId, String hostId) {
 		this.clientId = clientId;
 		this.hostId = hostId;
 		
 		//SLogger.d(TAG, "server path=" + CServer.getInstance().path);
 		
-		clientPath = new File(CServer.getInstance().path, "client_" + this.clientId);
+		clientPath = new File(dbRoot, "client_" + this.clientId);
 		if (!clientPath.exists())
 			clientPath.mkdir();
 		

@@ -1,8 +1,7 @@
-package com.cserver.server;
+package com.cserver.shared;
 
 import redis.clients.jedis.Jedis;
 
-import com.cserver.shared.SLogger;
 
 public class JedisWrapper {
 	private static final String TAG = "JedisWrapper";

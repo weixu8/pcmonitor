@@ -14,7 +14,7 @@ public class MessageInfo implements IMapDumpable {
 		Map<String, String> map = new HashMap<String, String>();
 		map.put("encKeyId", Long.toString(encKeyId));
 		map.put("msgId", Long.toString(msgId));
-		map.put("bytes", Json.bytesToString(bytes));
+		map.put("bytes", JsonHelper.bytesToString(bytes));
 		
 		return map;
 	}
@@ -24,7 +24,7 @@ public class MessageInfo implements IMapDumpable {
 		
 		encKeyId = Long.parseLong(map.get("encKeyId"));
 		msgId = Long.parseLong(map.get("msgId"));
-		bytes = Json.stringToBytes(map.get("bytes"));
+		bytes = JsonHelper.stringToBytes(map.get("bytes"));
 		
 		return true;
 	}

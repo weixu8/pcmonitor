@@ -1,7 +1,6 @@
-package com.cserver.server;
+package com.cserver.shared;
 import org.apache.commons.mail.*;
 
-import com.cserver.shared.SLogger;
 
 public class Email {
 	private static final String TAG = "Email";

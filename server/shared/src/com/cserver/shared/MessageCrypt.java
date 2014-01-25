@@ -208,14 +208,14 @@ public class MessageCrypt {
 		
 		if (clock != null)
 			clock.start();
-		dstPubKey = Json.stringToPublicKey(queryResult.publicKey);
+		dstPubKey = JsonHelper.stringToPublicKey(queryResult.publicKey);
 		if (clock != null)
 			SLogger.d(TAG, "encryptMessage:Json.stringToPublicKey time=" + clock.elapsedTime());
 		
 		if (clock != null)
 			clock.start();
 		
-		privKey = Json.stringToPrivateKey(privKeyS);
+		privKey = JsonHelper.stringToPrivateKey(privKeyS);
 		if (clock != null)
 			SLogger.d(TAG, "encryptMessage:Json.stringToPrivateKey time=" + clock.elapsedTime());
 		
@@ -224,7 +224,7 @@ public class MessageCrypt {
 		if (debug) {
 			SLogger.d(TAG, "encryptMessage:msg.encKeyId=" + msg.encKeyId);
 			SLogger.d(TAG, "encryptMessage:msg.signKeyId=" + msg.signKeyId);
-			SLogger.d(TAG, "encryptMessage:pubKey=" + Json.publicKeyToString(dstPubKey));
+			SLogger.d(TAG, "encryptMessage:pubKey=" + JsonHelper.publicKeyToString(dstPubKey));
 		}
 		
 		if (clock != null)
@@ -404,7 +404,7 @@ public class MessageCrypt {
 		
 		MessageCryptResult result = new MessageCryptResult();
 		
-		PrivateKey privKey = Json.stringToPrivateKey(privKeyS);
+		PrivateKey privKey = JsonHelper.stringToPrivateKey(privKeyS);
 
 		if (debug) {
 			SLogger.d(TAG, "decryptMessage:privKey" + privKeyS);
@@ -562,7 +562,7 @@ public class MessageCrypt {
 			return result;			
 		}
 		
-		PublicKey signKey = Json.stringToPublicKey(queryResult.publicKey);
+		PublicKey signKey = JsonHelper.stringToPublicKey(queryResult.publicKey);
 		
 		byte[] plainBodyHash = rsaDecrypt(signKey, bodySign);
 		
@@ -620,7 +620,7 @@ public class MessageCrypt {
 				return null;
 		}
 		
-		return Json.bytesToString(digestb);
+		return JsonHelper.bytesToString(digestb);
 	}
 
 	public static void main(String[] args) {
@@ -628,8 +628,8 @@ public class MessageCrypt {
 		SLogger.start(false, "c:\\log.txt", null);
 		
 		KeyPair kp = genKeys();
-		System.out.println("public=" + Json.publicKeyToString(kp.getPublic()));
-		System.out.println("private=" + Json.privateKeyToString(kp.getPrivate()));
+		System.out.println("public=" + JsonHelper.publicKeyToString(kp.getPublic()));
+		System.out.println("private=" + JsonHelper.privateKeyToString(kp.getPrivate()));
 		
 		/*
 		KeyPair kp = genKeys();
