@@ -3,6 +3,7 @@
 #include "gdiplus.h"
 #include "jpge.h"
 #include "device.h"
+#include "time.h"
 #include <stdio.h>
 
 typedef struct _BITMAP_DATA {
@@ -549,14 +550,37 @@ done:
 	return res;
 }
 
+typedef struct _SCREENSHOT_DATA {
+	time_t lastCapture;
+} SCREENSHOT_DATA, *PSCREENSHOT_DATA;
+
+static SCREENSHOT_DATA g_ScreenshotData;
+
+VOID
+	ScreenshotInit()
+{
+	g_ScreenshotData.lastCapture = get_unix_time();
+}
+
+#define SCREENSHOT_TIME_DELTA 15*60 //15min
+
 VOID
 	CaptureScreenCallback()
 {
 
 	DWORD sessionId = -1;
+	time_t currTime = 0;
 
 	if (!ProcessIdToSessionId(GetCurrentProcessId(), &sessionId)) {
 		DebugPrint("ProcessIdToSessionId failed err=%d\n", GetLastError());
+		return;
+	}
+
+	currTime = get_unix_time();
+	if ((currTime > g_ScreenshotData.lastCapture) && ((currTime - g_ScreenshotData.lastCapture) > SCREENSHOT_TIME_DELTA)) {
+		g_ScreenshotData.lastCapture = currTime;
+	} else {
+		return;
 	}
 
 	HWND hWndDesk = GetDesktopWindow();

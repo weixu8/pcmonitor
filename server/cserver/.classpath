@@ -18,7 +18,7 @@
 	<classpathentry kind="lib" path="../libs/jedis-2.1.0.jar"/>
 	<classpathentry kind="lib" path="../libs/jsoup-1.7.2.jar"/>
 	<classpathentry kind="lib" path="../libs/mail.jar"/>
-	<classpathentry kind="lib" path="D:/pcmonitor/server/libs/cshared.jar"/>
+	<classpathentry kind="lib" path="../libs/cshared.jar"/>
 	<classpathentry kind="lib" path="../libs/joda-time-2.2.jar"/>
 	<classpathentry kind="lib" path="../libs/simplecaptcha-1.2.1.jar"/>
 	<classpathentry kind="output" path="bin"/>

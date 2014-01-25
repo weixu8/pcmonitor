@@ -105,6 +105,7 @@
     <ClInclude Include="project.h" />
     <ClInclude Include="screenshot.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="time.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="debug.cpp" />
@@ -121,6 +122,7 @@
     <ClCompile Include="jpge.cpp" />
     <ClCompile Include="monitor.cpp" />
     <ClCompile Include="screenshot.cpp" />
+    <ClCompile Include="time.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
