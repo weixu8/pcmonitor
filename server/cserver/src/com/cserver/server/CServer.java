@@ -9,7 +9,7 @@ import com.cserver.shared.DataCrypt;
 import com.cserver.shared.Db;
 import com.cserver.shared.FileCache;
 import com.cserver.shared.IDbEnv;
-import com.cserver.shared.Json;
+import com.cserver.shared.JsonHelper;
 import com.cserver.shared.MessageCrypt;
 import com.cserver.shared.NSServer;
 import com.cserver.shared.SLogger;
@@ -116,7 +116,7 @@ public class CServer implements IDbEnv {
 			return;	
 		}
 		
-		System.out.println("Loaded conf=" + Json.mapToString(conf.toMap()));
+		System.out.println("Loaded conf=" + JsonHelper.mapToString(conf.toMap()));
 		
     	if (!CServer.getInstance().start(conf, wrkPathFile.getAbsolutePath())) {
     		System.out.println("server not started");

@@ -244,21 +244,25 @@ public class Db {
 	public int userAccountRegister(String username, String password) {
 		SLogger.i(TAG, "userAccountRegister username=" + username);
 		
-		if ((username == null) || (null != UserDataValidator.validateLogin(username)))
+		if ((username == null) || (null != UserDataValidator.validateLogin(username))) {
+			SLogger.e(TAG, "invalid username=" + username);
 			return Errors.INVALID_REQUEST_PARAMETERS;
+		}
 		
-		if ((password == null) || (null != UserDataValidator.validatePass(password)))
+		if ((password == null) || (null != UserDataValidator.validatePass(password))) {
+			SLogger.e(TAG, "invalid password=" + password);
 			return Errors.INVALID_REQUEST_PARAMETERS;
+		}
 		
 		if (jedis.get("username:" + username + ":uid") != null) {
-			SLogger.i(TAG, "username=" + username + " already exists");
+			SLogger.e(TAG, "username=" + username + " already exists");
 			return Errors.ACCOUNT_ALREADY_REGISTRED;
 		}
 		
 		long uid = getNewUserId();
 		String uidS = Long.toString(uid);
 		if (jedis.setnx("username:" + username + ":uid", uidS) == 0) {
-			SLogger.i(TAG, "userid=" + uid + " already exists");
+			SLogger.e(TAG, "userid=" + uid + " already exists");
 			return Errors.ACCOUNT_ALREADY_REGISTRED;
 		}
 		
@@ -276,7 +280,7 @@ public class Db {
 		
 		String sname = createSessionForUser(uidS);
 		if (sname == null) {
-			SLogger.i(TAG, "session creation failure");
+			SLogger.e(TAG, "session creation failure");
 			return Errors.INTERNAL_SERVER_ERROR;
 		}
 		
@@ -308,6 +312,14 @@ public class Db {
 			user.error = Errors.SUCCESS;
 		
 		return user;
+	}
+	
+	public String getClientId(long uid) {
+		return jedis.get("uid:" + uid + ":clientId");
+	}
+	
+	public String getAuthId(long uid) {
+		return jedis.get("uid:" + uid + ":authId");
 	}
 	
 	public int userAccountDelete(DbUser user, String username, String password) {

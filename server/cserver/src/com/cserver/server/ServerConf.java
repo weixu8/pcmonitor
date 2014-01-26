@@ -6,7 +6,7 @@ import java.util.Map;
 
 import com.cserver.shared.FileOps;
 import com.cserver.shared.IMapDumpable;
-import com.cserver.shared.Json;
+import com.cserver.shared.JsonHelper;
 
 public class ServerConf implements IMapDumpable {
 
@@ -60,7 +60,7 @@ public class ServerConf implements IMapDumpable {
 			return null;
 		
 		ServerConf conf = new ServerConf();
-		conf.parseMap(Json.stringToMap(json));
+		conf.parseMap(JsonHelper.stringToMap(json));
 		
 		return conf;
 	}

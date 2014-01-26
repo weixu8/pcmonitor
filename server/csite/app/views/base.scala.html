@@ -1,4 +1,4 @@
-@(title: String)(scripts: Html = Html(""))(content: Html)
+@(title: String)(style : Html = Html(""))(scripts: Html = Html(""))(content: Html)
 <!DOCTYPE html>
 
 <html ng-app>
@@ -16,24 +16,18 @@
             padding-bottom: 40px;
           }
         </style>
+        @style
     </head>
     <body>
         <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
           <div class="container">
             <div class="navbar-header">
-              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                <span class="sr-only">Toggle navigation</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-              </button>
-              <a class="navbar-brand" href="/">WindowsMonitor</a>
+              <a class="navbar-brand" href="/">PWM</a>
             </div>
             <div class="collapse navbar-collapse">
-              <ul class="nav navbar-nav">
-              	<li class="active"><a href="/">Main</a></li>
+              <ul id="navbarList" class="nav navbar-nav">
+                <li><a id="loginLink" href="/login">Log In</a></li>
                 <li><a href="/join">Join</a></li>
-                <li><a href="/login">Log In</a></li>
                 <li><a href="/about">About</a></li>
               </ul>
             </div><!--/.nav-collapse -->
@@ -51,6 +45,8 @@
         <script src="@routes.Assets.at("js/angular.min.js")" type="text/javascript"></script>      
         <script src="@routes.Assets.at("js/jquery-2.0.3.min.js")" type="text/javascript"></script>
         <script src="@routes.Assets.at("js/bootstrap.min.js")" type="text/javascript"></script>
+        <script src="@routes.Assets.at("js/curruser.js")" type="text/javascript"></script>
+        <script src="@routes.Assets.at("js/base.js")" type="text/javascript"></script>
         @scripts
     </body>
 </html>

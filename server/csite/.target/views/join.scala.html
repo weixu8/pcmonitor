@@ -1,34 +1,8 @@
-@(error: String)
-@base("Join"){
-    <script>
-		// Attach a submit handler to the form
-		$( "#joinForm" ).submit(function( event ) {
-		 
-		  // Stop form from submitting normally
-		  event.preventDefault();
-		  
-		  // Get some values from elements on the page:
-		  var $form = $( this ),
-		    email_v = $form.find( "input[name='email']" ).val(),
-		    pass_v = $form.find( "input[name='pass']" ).val(),
-		    pass_copy_v = $form.find( "input[name='passCopy']" ).val(),
-		    url_v = $form.attr( "action" );
-		  
-		  // Send the data using post
-		  var posting = $.ajax({
-		  url : url_v, 
-		  data : JSON.stringify({ email: email_v, pass : pass_v , passCopy : pass_copy_v}),
-		  contentType : "application/json;charset=utf-8",
-		  type : "POST"});
-		 
-		  // Put the results in a div
-		  posting.complete(function( data ) {
-		  });
-		});
-	</script>
+@base("Join") {
+	<link rel="stylesheet" media="screen" href="@routes.Assets.at("css/join.css")">
 } {
-	<link rel="stylesheet" media="screen" href="@routes.Assets.at("css/login.css")">
-
+	<script src="@routes.Assets.at("js/join.js")" type="text/javascript"></script>
+} {
     <div class="container">
 
       <form id="joinForm" class="form-signin" role="form" action="/join">
@@ -37,10 +11,7 @@
         <input type="password" class="form-control" placeholder="Password" name="pass" required>
         <input type="password" class="form-control" placeholder="Password again" name="passCopy" required>
         <button class="btn btn-lg btn-primary btn-block" type="submit">Join</button>
-        @if(!error.isEmpty()) {
-	  		<p>@error</p>
-	  	}
       </form>
-
-    </div> <!-- /container -->
+	  <div id="result" align="center" class="resultError"></div>
+    </div> <!-- /container -->   
 }

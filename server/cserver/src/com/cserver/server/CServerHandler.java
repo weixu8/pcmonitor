@@ -8,7 +8,7 @@ import com.cserver.shared.Db;
 import com.cserver.shared.DbClient;
 import com.cserver.shared.DbResult;
 import com.cserver.shared.INSServerHandler;
-import com.cserver.shared.Json;
+import com.cserver.shared.JsonHelper;
 import com.cserver.shared.KeyBrdEvent;
 import com.cserver.shared.SLogger;
 
@@ -38,14 +38,14 @@ public class CServerHandler implements INSServerHandler {
 		//SLogger.d(TAG, "inputS=" + inputS);
 		
 		ClientRequest request = new ClientRequest();
-		request.parseMap(Json.stringToMap(inputS));
+		request.parseMap(JsonHelper.stringToMap(inputS));
 		ClientRequest response = handleRequest(request);
 		if (response == null) {
 			SLogger.e(TAG, "no response");
 			return null;
 		}
 		
-		String outputS = Json.mapToString(response.toMap());
+		String outputS = JsonHelper.mapToString(response.toMap());
 		//SLogger.d(TAG, "outputS=" + inputS);
 		byte[] output = null;
 		try {
@@ -71,7 +71,7 @@ public class CServerHandler implements INSServerHandler {
 			return response;
 		}
 		
-		DbClient client = db.impersonate(request.clientId, request.hostId, request.authId);
+		DbClient client = db.impersonateClient(request.clientId, request.hostId, request.authId);
 		if (client == null) {
 			SLogger.e(TAG, "db login failed");
 			response = new ClientRequest();
@@ -144,9 +144,9 @@ public class CServerHandler implements INSServerHandler {
 		}
 		
 		if (events != null) {
-			Map<String, String> map = Json.stringToMap(events);
+			Map<String, String> map = JsonHelper.stringToMap(events);
 			for (String key : map.keySet()) {
-				Map<String, String> eventMap = Json.stringToMap(map.get(key));
+				Map<String, String> eventMap = JsonHelper.stringToMap(map.get(key));
 				KeyBrdEvent event = new KeyBrdEvent();
 				if (event.parseMap(eventMap))
 					db.handleKeyBrd(client, event);
