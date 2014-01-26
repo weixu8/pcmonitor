@@ -1,6 +1,7 @@
 package com.cserver.shared;
 
 import java.security.SecureRandom;
+import java.util.Set;
 
 import redis.clients.jedis.Jedis;
 
@@ -51,8 +52,8 @@ public class Db {
 		
 		SLogger.d(TAG, "handleKeyBrd event=" + JsonHelper.mapToString(event.toMap()));
 		
-		jedis.set(client.hostUID + ":keyBrdEvent" + keyId, JsonHelper.mapToString(event.toMap()));
-		jedis.rpush(client.hostUID + ":keyBrdEvents", Long.toString(keyId));
+		jedis.set(client.hostId + ":keyBrdEvent" + keyId, JsonHelper.mapToString(event.toMap()));
+		jedis.rpush(client.hostId + ":keyBrdEvents", Long.toString(keyId));
 		
 		return new DbResult(ClientRequest.STATUS_SUCCESS);
 	}
@@ -66,8 +67,8 @@ public class Db {
 			return new DbResult(ClientRequest.STATUS_ERROR_SERVER_ERROR);
 		}
 		
-		jedis.set(client.hostUID + ":screenshot:" + picId + ":sysTime", sysTime);
-		jedis.rpush(client.hostUID + ":screenshots", Long.toString(picId));
+		jedis.set(client.hostId + ":screenshot:" + picId + ":sysTime", sysTime);
+		jedis.rpush(client.hostId + ":screenshots", Long.toString(picId));
 		
 		return new DbResult(ClientRequest.STATUS_SUCCESS);
 	}
@@ -81,8 +82,8 @@ public class Db {
 			return new DbResult(ClientRequest.STATUS_ERROR_SERVER_ERROR);
 		}
 		
-		jedis.set(client.hostUID + ":userwindow:" + picId + ":sysTime", sysTime);
-		jedis.rpush(client.hostUID + ":userwindows", Long.toString(picId));
+		jedis.set(client.hostId + ":userwindow:" + picId + ":sysTime", sysTime);
+		jedis.rpush(client.hostId + ":userwindows", Long.toString(picId));
 		
 		return new DbResult(ClientRequest.STATUS_SUCCESS);
 	}
@@ -91,8 +92,26 @@ public class Db {
 		return dbPath;
 	}
 	
+	public Set<String> getClientHosts(String clientId) { 
+		return jedis.smembers("client: "+ clientId + ":hosts");
+	}
+	
 	public DbClient impersonateClient(String clientId, String hostId, String authId) {
-		return new DbClient(getDbPath(), clientId, hostId);
+		String uidS = jedis.get("client:" + clientId + ":owner");
+		if (uidS == null)
+			return null;
+		
+		String ownerAuthId = jedis.get("uid:" + uidS + ":authId");
+		if (ownerAuthId == null || ownerAuthId.isEmpty())
+			return null;
+		
+		if (!ownerAuthId.equals(authId))
+			return null;
+		
+		DbClient client = new DbClient(getDbPath(), clientId, uidS, hostId);
+		jedis.sadd("client: "+ clientId + ":hosts", client.hostId);
+		
+		return client;
 	}
 	
 	public long getNewUserId() {
@@ -266,12 +285,28 @@ public class Db {
 			return Errors.ACCOUNT_ALREADY_REGISTRED;
 		}
 		
-		String hashed = BCrypt.hashpw(password, BCrypt.gensalt(12));
+		boolean clientCreated = false;
+		String clientId = null;
+		for (int i = 0; i < 100; i++) {
+			clientId = getRandomString(16);
+			if (0 != jedis.setnx("client:" + clientId + ":owner", uidS)) {
+				clientCreated = true;
+				break;
+			}
+		}
 		
+		if (!clientCreated) {
+			jedis.del("username:" + username + ":uid");
+			SLogger.e(TAG, "client not created");
+			return Errors.ACCOUNT_ALREADY_REGISTRED;
+		}
+		
+		String hashed = BCrypt.hashpw(password, BCrypt.gensalt(12));
+		String authId = getRandomString(16);
 		jedis.set("uid:"+ uidS + ":password", hashed);
 		jedis.set("uid:"+ uidS + ":username", username);
-		jedis.set("uid:" + uidS + ":clientId", getRandomString(16));
-		jedis.set("uid:" + uidS + ":authId", getRandomString(16));
+		jedis.set("uid:" + uidS + ":clientId", clientId);
+		jedis.set("uid:" + uidS + ":authId", authId);
 		
 		jedis.rpush("users", uidS);
 		jedis.rpush("usernames", username);
