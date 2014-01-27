@@ -1,11 +1,23 @@
+@(hosts: Set[String])
 @base("Profile"){
 	<link rel="stylesheet" media="screen" href="@routes.Assets.at("css/profile.css")">
 } {
 	<script src="@routes.Assets.at("js/profile.js")" type="text/javascript"></script>
-} {    
+} { 
+	<div>   
 	<p> Your are <span class="userValues" id="profileUserName"></span></p>
 	<p> Id is <span class="userValues" id="profileUID"></span></p>
 	<p> Session is <span class="userValues" id="profileSession"></span></p>
 	<p> ClientId is <span class="userValues" id="profileClientId"></span></p>
 	<p> AuthId is <span class="userValues" id="profileAuthId"></span></p>
+	</div>
+	
+	<div>
+	<p> Your hosts are:</p>
+	<ul>
+	@for(host <- hosts) {
+	  <li><a href="/host/@host">@host</a></li>
+	}
+	</ul>
+	</div>
 }

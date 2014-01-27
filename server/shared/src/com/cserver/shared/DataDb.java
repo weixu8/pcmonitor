@@ -97,6 +97,11 @@ public class DataDb {
 		return new File(getDbDir(), uuid + "_" + fileExt);
 	}
 	
+	public File getObjectFile(String uid, long id) {
+		String uuid = makeUUID(uid, id);
+		return getObjectFile(uuid);
+	}
+	
 	public void delete(String uid, long id) {
 		String uuid = makeUUID(uid, id);
 		cache.delete(uuid);

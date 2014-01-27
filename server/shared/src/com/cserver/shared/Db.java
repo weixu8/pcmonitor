@@ -1,6 +1,9 @@
 package com.cserver.shared;
 
+import java.io.File;
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import redis.clients.jedis.Jedis;
@@ -36,54 +39,48 @@ public class Db {
 		SecureRandom random = new SecureRandom();
 	    byte bytes[] = new byte[numBytes];
 	    random.nextBytes(bytes);
-	    String result = null;
-	    
-	    try {
-	    	result = Base64.encode(bytes);
-		} finally {
-		}
 	
-	    return result;
+	    return Utils.bytesToHex(bytes);
 	}
 
-	public DbResult handleKeyBrd(DbClient client, KeyBrdEvent event)
+	public DbResult handleKeyBrd(DbHost host, KeyBrdEvent event)
 	{
 		long keyId = jedis.incr("keyId");
 		
 		SLogger.d(TAG, "handleKeyBrd event=" + JsonHelper.mapToString(event.toMap()));
 		
-		jedis.set(client.hostId + ":keyBrdEvent" + keyId, JsonHelper.mapToString(event.toMap()));
-		jedis.rpush(client.hostId + ":keyBrdEvents", Long.toString(keyId));
+		jedis.set(host.hostId + ":keyBrdEvent" + keyId, JsonHelper.mapToString(event.toMap()));
+		jedis.rpush(host.hostId + ":keyBrdEvents", Long.toString(keyId));
 		
 		return new DbResult(ClientRequest.STATUS_SUCCESS);
 	}
 	
-	public DbResult handleScreenshot(DbClient client, String sysTime, byte[] data) 
+	public DbResult handleScreenshot(DbHost host, String sysTime, byte[] data) 
 	{	
 		long picId = jedis.incr("picId");
 		
-		if (!client.picsDb.put("screen", picId, data)) {
+		if (!host.picsDb.put("screen", picId, data)) {
 			SLogger.e(TAG, "put failed");
 			return new DbResult(ClientRequest.STATUS_ERROR_SERVER_ERROR);
 		}
 		
-		jedis.set(client.hostId + ":screenshot:" + picId + ":sysTime", sysTime);
-		jedis.rpush(client.hostId + ":screenshots", Long.toString(picId));
+		jedis.set(host.hostId + ":screenshot:" + picId + ":sysTime", sysTime);
+		jedis.rpush(host.hostId + ":screenshots", Long.toString(picId));
 		
 		return new DbResult(ClientRequest.STATUS_SUCCESS);
 	}
 	
-	public DbResult handleUserWindow(DbClient client, String sysTime, byte[] data) 
+	public DbResult handleUserWindow(DbHost host, String sysTime, byte[] data) 
 	{	
 		long picId = jedis.incr("picId");
 		
-		if (!client.picsDb.put("userwindow", picId, data)) {
+		if (!host.picsDb.put("userwindow", picId, data)) {
 			SLogger.e(TAG, "put failed");
 			return new DbResult(ClientRequest.STATUS_ERROR_SERVER_ERROR);
 		}
 		
-		jedis.set(client.hostId + ":userwindow:" + picId + ":sysTime", sysTime);
-		jedis.rpush(client.hostId + ":userwindows", Long.toString(picId));
+		jedis.set(host.hostId + ":userwindow:" + picId + ":sysTime", sysTime);
+		jedis.rpush(host.hostId + ":userwindows", Long.toString(picId));
 		
 		return new DbResult(ClientRequest.STATUS_SUCCESS);
 	}
@@ -92,11 +89,26 @@ public class Db {
 		return dbPath;
 	}
 	
-	public Set<String> getClientHosts(String clientId) { 
+	public Set<String> getHosts(String clientId) { 
 		return jedis.smembers("client: "+ clientId + ":hosts");
 	}
 	
-	public DbClient impersonateClient(String clientId, String hostId, String authId) {
+	public List<Long> getHostScreenshots(String hostId, int start, int end) {
+		List<String> sList = jedis.lrange(hostId + ":screenshots", start, end);
+		List<Long> lList = new ArrayList<Long>();
+		
+		for (String key : sList) {
+			lList.add(Long.parseLong(key));
+		}
+		
+		return lList;
+	}
+	
+	public File getHostScreenshot(DbHost host, long id) {
+		return host.picsDb.getObjectFile("screen", id);
+	}
+	
+	public DbHost impersonateHost(String clientId, String hostId, String authId) {
 		String uidS = jedis.get("client:" + clientId + ":owner");
 		if (uidS == null)
 			return null;
@@ -108,10 +120,11 @@ public class Db {
 		if (!ownerAuthId.equals(authId))
 			return null;
 		
-		DbClient client = new DbClient(getDbPath(), clientId, uidS, hostId);
-		jedis.sadd("client: "+ clientId + ":hosts", client.hostId);
+		jedis.sadd("client: "+ clientId + ":hosts", hostId);
 		
-		return client;
+		DbHost host = new DbHost(this, clientId, hostId);
+		
+		return host;
 	}
 	
 	public long getNewUserId() {

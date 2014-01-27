@@ -1,9 +1,13 @@
 package controllers;
 
+import java.io.File;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.cserver.shared.Db;
+import com.cserver.shared.DbHost;
 import com.cserver.shared.DbResult;
 import com.cserver.shared.DbUser;
 import com.cserver.shared.Errors;
@@ -96,11 +100,17 @@ public class Application extends Controller {
     
     public static Result profile() {
     	String session = session("user");
-    	if (session == null) {
+    	if (session == null)
     		return redirect("/login");
-    	}
+    	
+		Db db = getDb();
+		DbUser user = db.impersonate(session);
+		if (user == null)
+			return redirect("/login");
+		
+		Set<String> hosts = db.getHosts(user.clientId);
 
-    	return ok(profile.render());
+    	return ok(profile.render(hosts));
     }
     
     public static Result doJoin() {
@@ -114,5 +124,67 @@ public class Application extends Controller {
     	int error = db.userAccountRegister(map.get("email"),  map.get("pass"));
     	
     	return ok(jsonError(error));
+    }
+    
+    public static Result host(String hostId) {
+    	String session = session("user");
+    	if (session == null)
+    		return redirect("/login");
+    	
+		Db db = getDb();
+		DbUser user = db.impersonate(session);
+		if (user == null)
+			return redirect("/login");
+		
+		Set<String> hosts = db.getHosts(user.clientId);
+		if (!hosts.contains(hostId)) {
+			return ok(host.render(hostId, "Information about this host doesn't exists."));
+		}
+		
+		return ok(host.render(hostId, ""));
+    }
+    
+    public static Result screenshot(String hostId, long id) {
+      	String session = session("user");
+    	if (session == null)
+    		return notFound();
+    	
+		Db db = getDb();
+		DbUser user = db.impersonate(session);
+		if (user == null)
+			return notFound();
+		
+		Set<String> hosts = db.getHosts(user.clientId);
+		if (!hosts.contains(hostId))
+			return notFound();
+
+		DbHost host = new DbHost(db, user.clientId, hostId);
+
+    	File screenshot = db.getHostScreenshot(host, id);
+    	return ok(screenshot);
+    }
+    
+    public static Result screenshots(String hostId, int start, int end) {
+    	String session = session("user");
+    	Map<String, String> map = new HashMap<String, String>();
+    	map.put("error", "-1");
+    	
+    	if (session == null)
+    		return ok(JsonHelper.mapToString(map));
+    	
+		Db db = getDb();
+		DbUser user = db.impersonate(session);
+		if (user == null)
+			return ok(JsonHelper.mapToString(map));
+		
+		Set<String> hosts = db.getHosts(user.clientId);
+		if (!hosts.contains(hostId))
+			return ok(JsonHelper.mapToString(map));
+		
+		List<Long> picsIds = db.getHostScreenshots(hostId, start, end);
+		map.put("error", "0");
+		map.put("picIds", JsonHelper.longListToString(picsIds));
+		
+		return ok(JsonHelper.mapToString(map));
     }
 }

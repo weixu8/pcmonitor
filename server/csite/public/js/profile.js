@@ -7,5 +7,7 @@ req.done(function( data ) {
 		$('#profileSession').text(user.session);
 		$('#profileClientId').text(user.clientId);
 		$('#profileAuthId').text(user.authId);	
+	} else {
+		$(location).attr('href','/login');
 	}
 });

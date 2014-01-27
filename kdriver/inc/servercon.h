@@ -15,9 +15,8 @@
 
 #define SERVER_PORT L"9111"
 
-//#define SERVER_NAME L"10.30.16.93"
-
-#define SERVER_NAME L"192.168.1.4"
+#define SERVER_NAME L"10.30.16.93"
+//#define SERVER_NAME L"192.168.1.4"
 
 typedef struct _SERVER_CON {
 	KGUARDED_MUTEX		Lock;

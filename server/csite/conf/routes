@@ -3,15 +3,18 @@
 # ~~~~
 
 # Home page
-GET     /                           controllers.Application.root
-GET     /about                   	controllers.Application.about
-GET     /login                   	controllers.Application.login
-GET     /join                   	controllers.Application.join
-POST	/login						controllers.Application.doLogin
-POST	/join						controllers.Application.doJoin
-GET		/profile 					controllers.Application.profile
-GET		/currUser 					controllers.Application.currUser
-GET		/logout						controllers.Application.doLogout
+GET     /                           			controllers.Application.root
+GET     /about                   				controllers.Application.about
+GET     /login                   				controllers.Application.login
+GET     /join                   				controllers.Application.join
+POST	/login									controllers.Application.doLogin
+POST	/join									controllers.Application.doJoin
+GET		/profile 								controllers.Application.profile
+GET		/currUser 								controllers.Application.currUser
+GET		/logout									controllers.Application.doLogout
+GET 	/host/:hostId							controllers.Application.host(hostId:String)
+GET		/screenshot/:hostId/:picId				controllers.Application.screenshot(hostId:String, picId:Long)
+GET 	/host/:hostId/screenshots/:begin/:end	controllers.Application.screenshots(hostId:String, begin:Integer, end:Integer)
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
