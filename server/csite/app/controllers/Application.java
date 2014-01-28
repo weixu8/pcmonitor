@@ -1,6 +1,7 @@
 package controllers;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -127,6 +128,40 @@ public class Application extends Controller {
     	return ok(jsonError(error));
     }
     
+    public static Result screenshots(String hostId) {
+    	String session = session("user");
+    	if (session == null)
+    		return redirect("/login");
+    	
+		Db db = getDb();
+		DbUser user = db.impersonate(session);
+		if (user == null)
+			return redirect("/login");
+
+		DbHost host = db.refHost(user, hostId);
+		if (host == null)
+			return ok(hostv.render(hostId, "This host doesn't exists"));
+		
+		return ok(screenshots.render(hostId));
+    }
+    
+    public static Result kbevents(String hostId) {
+    	String session = session("user");
+    	if (session == null)
+    		return redirect("/login");
+    	
+		Db db = getDb();
+		DbUser user = db.impersonate(session);
+		if (user == null)
+			return redirect("/login");
+
+		DbHost host = db.refHost(user, hostId);
+		if (host == null)
+			return ok(hostv.render(hostId, "This host doesn't exists"));
+		
+		return ok(kbevents.render(hostId));
+    }
+    
     public static Result host(String hostId) {
     	String session = session("user");
     	if (session == null)
@@ -139,8 +174,8 @@ public class Application extends Controller {
 
 		DbHost host = db.refHost(user, hostId);
 		if (host == null)
-			return ok(hostv.render(hostId, "Information about this host doesn't exists."));
-				
+			return ok(hostv.render(hostId, "This host doesn't exists"));
+
 		return ok(hostv.render(hostId, ""));
     }
     
@@ -162,7 +197,7 @@ public class Application extends Controller {
     	return ok(screen.file);
     }
     
-    public static Result screenshots(String hostId, int start, int end) {
+    public static Result getScreenshots(String hostId, int start, int end) {
     	String session = session("user");
     	Map<String, String> map = new HashMap<String, String>();
     	map.put("error", "-1");
@@ -189,6 +224,37 @@ public class Application extends Controller {
 		map.put("error", "0");		
 		map.put("ids", JsonHelper.longListToString(ids));
 		map.put("idsToTime", JsonHelper.mapLStoString(idsToTime));
+		
+		return ok(JsonHelper.mapToString(map));
+    }
+    
+    public static Result getKbEvents(String hostId, int start, int end) {
+    	String session = session("user");
+    	Map<String, String> map = new HashMap<String, String>();
+    	map.put("error", "-1");
+    	
+    	if (session == null)
+    		return ok(JsonHelper.mapToString(map));
+    	
+		Db db = getDb();
+		DbUser user = db.impersonate(session);
+		if (user == null)
+			return ok(JsonHelper.mapToString(map));
+		
+		DbHost host = db.refHost(user, hostId);
+		if (host == null)
+			return ok(JsonHelper.mapToString(map));
+		
+		List<Long> ids = db.hostKeybrdEvents(host, start, end);
+		List<String> events = new ArrayList<String>();
+		for (Long id : ids) {
+			String event = db.hostKeybrdEvent(host, id);
+			if (event != null)
+				events.add(event);
+		}
+		
+		map.put("error", "0");		
+		map.put("events", JsonHelper.stringListToString(events));
 		
 		return ok(JsonHelper.mapToString(map));
     }

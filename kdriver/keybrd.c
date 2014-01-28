@@ -12,14 +12,14 @@
 #define FMT_BUFF_TAG 'kbdp'
 
 PCHAR g_ScanCodeMap[] =  {"UNK", "ESC", "1", "2", "3", "4", "5", "6", "7", "8", 
-                        "9", "0", "-", "=", "bs", "Tab", "Q", "W", "E", "R", 
+                        "9", "0", "-", "=", "BS", "TAB", "Q", "W", "E", "R", 
                         "T", "Y", "U", "I", "O", "P", "[", "]", "ENTER", "CTRL", 
                         "A", "S", "D", "F", "G", "H", "J", "K", "L", ";", 
                         "'", "`", "LSHIFT", "\\", "Z", "X", "C", "V", "B", "N", 
-                        "M", ",", ".", "/", "RSHIFT", "PrtSc", "Alt", "Space", "Caps", "F1",
-                        "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "Num",
-                        "Scroll", "Home", "Up", "PgUp", "Num-", "Left", "Center", "Right", "Num+", "End",
-                        "Down", "PgDn", "Ins", "Del"};
+                        "M", ",", ".", "/", "RSHIFT", "PRTSCR", "ALT", "SPACE", "CAPS", "F1",
+                        "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "NUM",
+                        "SCROLL", "HOME", "UP", "PGUP", "NUM-", "LEFT", "CENTER", "RIGHT", "NUM+", "END",
+                        "DOWN", "PGDN", "INS", "DEL"};
 
 STRING g_ScanCodeMapS[RTL_NUMBER_OF(g_ScanCodeMap)];
 

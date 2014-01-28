@@ -14,7 +14,10 @@ GET		/currUser 								controllers.Application.currUser
 GET		/logout									controllers.Application.doLogout
 GET 	/host/:hostId							controllers.Application.host(hostId:String)
 GET		/screenshot/:hostId/:picId				controllers.Application.screenshot(hostId:String, picId:Long)
-GET 	/host/:hostId/screenshots/:begin/:end	controllers.Application.screenshots(hostId:String, begin:Integer, end:Integer)
+GET 	/host/:hostId/getScreenshots/:begin/:end	controllers.Application.getScreenshots(hostId:String, begin:Integer, end:Integer)
+GET 	/host/:hostId/getKbEvents/:begin/:end		controllers.Application.getKbEvents(hostId:String, begin:Integer, end:Integer)
+GET 	/host/:hostId/screenshots				controllers.Application.screenshots(hostId:String)
+GET 	/host/:hostId/kbevents					controllers.Application.kbevents(hostId:String)
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)

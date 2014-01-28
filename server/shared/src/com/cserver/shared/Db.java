@@ -100,6 +100,22 @@ public class Db {
 		return null;
 	}
 	
+	public List<Long> hostKeybrdEvents(DbHost host, int start, int end) {
+		List<String> sList = jedis.lrange(host.hostId + ":keyBrdEvents", start, end);
+		List<Long> lList = new ArrayList<Long>();
+		
+		for (String key : sList) {
+			lList.add(Long.parseLong(key));
+		}
+		
+		return lList;
+	}
+	
+	public String hostKeybrdEvent(DbHost host, long id) {
+		String event = jedis.get(host.hostId + ":keyBrdEvent" + id);
+		return event;
+	}
+	
 	public List<Long> hostScreenshots(DbHost host, int start, int end) {
 		List<String> sList = jedis.lrange(host.hostId + ":screenshots", start, end);
 		List<Long> lList = new ArrayList<Long>();
