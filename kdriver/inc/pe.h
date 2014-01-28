@@ -2,6 +2,8 @@
 
 #include <inc\drvmain.h>
 #include <inc\klogger.h>
+#include <inc\ntapiex.h>
+
 #include <ntimage.h>
 
 PVOID
@@ -61,4 +63,10 @@ PeGetExportEntryByName(
 IN PIMAGE_DOS_HEADER  pDOSHeader,
 IN PIMAGE_NT_HEADERS  pPEHeader,
 IN PCSZ strFunctionName
+);
+
+
+PSYSTEM_MODULE_INFORMATION
+PeGetModuleInfo(
+IN PCSZ pModuleName
 );

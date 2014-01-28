@@ -47,6 +47,63 @@ PeGetModuleExportByName(PCSZ modName, PCSZ exportName)
 	return exportAddr;
 }
 
+PSYSTEM_MODULE_INFORMATION
+PeGetModuleInfo(
+	IN PCSZ pModuleName
+	)
+{
+	ULONG		ulReturn;
+	ULONG		ulCount;
+	ULONG		i;
+	PCHAR		pBuffer = NULL;
+	NTSTATUS	ntStatus;
+	PSYSTEM_MODULE_INFORMATION pModule, pCurrModule;
+	CHAR		initBuffer[10];
+	BOOLEAN		bFound = FALSE;
+
+	pModule = ExAllocatePoolWithTag(NonPagedPool, sizeof(SYSTEM_MODULE_INFORMATION), MODULE_TAG);
+	if (pModule == NULL)
+		return NULL;
+
+	ntStatus = ZwQuerySystemInformation(SystemModuleInformation, initBuffer, 10, &ulReturn);
+
+	ulReturn = 2 * ulReturn;
+
+	pBuffer = (PCHAR)ExAllocatePoolWithTag(
+		NonPagedPool,
+		ulReturn,
+		MODULE_TAG
+		);
+	if (!pBuffer)
+		return NULL;
+
+	ntStatus = ZwQuerySystemInformation(SystemModuleInformation, pBuffer, ulReturn, &ulReturn);
+	if (ntStatus == STATUS_SUCCESS)
+	{
+		ulCount = (ULONG)*((ULONG *)pBuffer);
+		pCurrModule = (PSYSTEM_MODULE_INFORMATION)(pBuffer + sizeof(ULONG_PTR));
+		for (i = 0; i<ulCount; i++)
+		{
+			PCHAR pBaseName = KstdStrRChr(pCurrModule->ImageName, '\\');
+			if (!pBaseName) pBaseName = pCurrModule->ImageName;
+			else pBaseName++;
+
+			if (!_stricmp((const char*)pBaseName, pModuleName))
+			{
+				RtlCopyMemory(pModule, pCurrModule, sizeof(SYSTEM_MODULE_INFORMATION));
+				bFound = TRUE;
+				break;
+			}
+			pCurrModule++;
+		}
+	}
+	ExFreePool(pBuffer);
+	if (!bFound)
+		ExFreePoolWithTag(pModule, MODULE_TAG);
+
+	return (bFound) ? pModule : NULL;
+}
+
 PVOID
 PeGetModuleBaseAddressByName(
 IN PCSZ pModuleName
