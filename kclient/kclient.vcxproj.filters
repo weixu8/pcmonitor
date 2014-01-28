@@ -21,6 +21,9 @@
     <ClInclude Include="scmload.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="kdriver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="client.cpp">
@@ -30,6 +33,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="scmload.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="kdriver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

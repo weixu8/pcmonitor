@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include "scmload.h"
+#include "kdriver.h"
 #include <stdio.h>
 #include "..\kdriver\h\drvioctl.h"
 
@@ -104,15 +105,56 @@ DWORD NTAPI CDrvRelease(char *clientId, char *authId)
 	return Result;
 }
 
+DWORD NTAPI CDrvDrop(WCHAR *DrvPath)
+{
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	DWORD dwError;
+	DWORD BytesWritten = 0;
+
+	hFile = CreateFile(DrvPath, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == INVALID_HANDLE_VALUE) {
+		dwError = GetLastError();
+		printf("cant drop driver err=%d\n", dwError);
+		return dwError;
+	}
+
+	if (!WriteFile(hFile, kdrv_data(), kdrv_data_size(), &BytesWritten, NULL)) {
+		dwError = GetLastError();
+		printf("WriteFile failed with err=%d\n", dwError);
+		goto cleanup;
+	}
+
+	if (BytesWritten != kdrv_data_size()) {
+		printf("WriteFile failed BytesWritten=%d vs dataSz=%d\n", BytesWritten, kdrv_data_size());
+		goto cleanup;
+	}
+
+	dwError = ERROR_SUCCESS;
+cleanup:
+
+	CloseHandle(hFile);
+	return dwError;
+
+}
+
 DWORD NTAPI CInstallDrv()
 {
 	SC_HANDLE hscm = NULL;
 	DWORD err;
-	WCHAR PathName[MAX_PATH];
+	WCHAR DrvPath[MAX_PATH];
+	WCHAR SysDir[MAX_PATH];
 
-	err = GetFullPathName(KMON_BINARY_W, MAX_PATH, PathName, NULL);
-	if (err == 0) {
-		printf("GetFullPathName error\n");
+	if (GetSystemDirectory(SysDir, RTL_NUMBER_OF(SysDir)) <= 0) {
+		printf("GetSystemDirectory failed with err=%d\n", GetLastError());
+		return -1;
+	}
+
+	_snwprintf((WCHAR *)DrvPath, RTL_NUMBER_OF(DrvPath), L"%ws\\%ws", SysDir, KMON_DRIVER_NAME_W);
+	printf("drv binary %ws\n", DrvPath);
+
+	err = CDrvDrop(DrvPath);
+	if (err != ERROR_SUCCESS) {
+		printf("CDrvDrop failed with err=%d\n", err);
 		return -1;
 	}
 
@@ -121,10 +163,8 @@ DWORD NTAPI CInstallDrv()
 		printf("Error OpenSCMHandle\n");
 		return -1;
 	}
-	
-	
-	printf("drv binary %ws\n", PathName);
-	if (!ScmInstallDriver(hscm, KMOM_NAME_W, PathName)) {
+		
+	if (!ScmInstallDriver(hscm, KMOM_NAME_W, DrvPath)) {
 		err = GetLastError();
 		if (err == ERROR_SERVICE_EXISTS) {
 			goto cleanup;

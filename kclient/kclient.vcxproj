@@ -93,13 +93,18 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <PreBuildEvent>
+      <Command>script.bat</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="client.h" />
+    <ClInclude Include="kdriver.h" />
     <ClInclude Include="scmload.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="client.cpp" />
+    <ClCompile Include="kdriver.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="scmload.cpp" />
   </ItemGroup>
