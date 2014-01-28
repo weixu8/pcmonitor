@@ -65,7 +65,7 @@ public class Db {
 		}
 		
 		jedis.set(host.hostId + ":screenshot:" + picId + ":sysTime", sysTime);
-		jedis.rpush(host.hostId + ":screenshots", Long.toString(picId));
+		jedis.lpush(host.hostId + ":screenshots", Long.toString(picId));
 		
 		return new DbResult(ClientRequest.STATUS_SUCCESS);
 	}
@@ -80,7 +80,7 @@ public class Db {
 		}
 		
 		jedis.set(host.hostId + ":userwindow:" + picId + ":sysTime", sysTime);
-		jedis.rpush(host.hostId + ":userwindows", Long.toString(picId));
+		jedis.lpush(host.hostId + ":userwindows", Long.toString(picId));
 		
 		return new DbResult(ClientRequest.STATUS_SUCCESS);
 	}
@@ -93,8 +93,15 @@ public class Db {
 		return jedis.smembers("client: "+ clientId + ":hosts");
 	}
 	
-	public List<Long> getHostScreenshots(String hostId, int start, int end) {
-		List<String> sList = jedis.lrange(hostId + ":screenshots", start, end);
+	public DbHost refHost(DbUser user, String hostId) {
+		if (jedis.sismember("client: "+ user.clientId + ":hosts", hostId)) {
+			return new DbHost(this, user.clientId, hostId); 
+		}
+		return null;
+	}
+	
+	public List<Long> hostScreenshots(DbHost host, int start, int end) {
+		List<String> sList = jedis.lrange(host.hostId + ":screenshots", start, end);
 		List<Long> lList = new ArrayList<Long>();
 		
 		for (String key : sList) {
@@ -103,9 +110,15 @@ public class Db {
 		
 		return lList;
 	}
-	
-	public File getHostScreenshot(DbHost host, long id) {
-		return host.picsDb.getObjectFile("screen", id);
+
+	public DbScrnshot hostScreenshot(DbHost host, long id) {
+		
+		DbScrnshot screen = new DbScrnshot();
+		
+		screen.file = host.picsDb.getObjectFile("screen", id);
+		screen.time = jedis.get(host.hostId + ":screenshot:" + id + ":sysTime");
+		
+		return screen;
 	}
 	
 	public DbHost impersonateHost(String clientId, String hostId, String authId) {

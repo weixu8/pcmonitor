@@ -1,6 +1,5 @@
 function getScreenshots(hostId, begin, end)
 {
-	console.log("hostId=" + hostId);
 	var req = $.ajax({
 		url : "/host/" + hostId + "/screenshots/" + begin + "/" + end, 
 	  	data : "",
@@ -18,11 +17,17 @@ function updateScreenshots()
 	req.done(function( data ) {
 		var result = $.parseJSON(data);
 		if (result.error == 0) {
-			var ids = $.parseJSON(result.picIds);
+			var ids = $.parseJSON(result.ids);
+			var idsToTime = $.parseJSON(result.idsToTime);
 			for (var i = 0; i < ids.length; i++) {
-				var url = "/screenshot/" + hostId + "/" + ids[i];
-				$('#screenshots').append('<img src=' + url + ' alt="alt text">');
-				
+				var id = ids[i];
+				var url = "/screenshot/" + hostId + "/" + id;
+				$('#screenshots').append(
+				'<div class="screenhost">' + 
+				'<p class="screenTime">' + idsToTime[id] + '</p>' + 
+				'<img class="screenPic" src=' + url + ' alt="alt text">' + 
+				'</div>'
+				);					
 			}
 		}
 	});

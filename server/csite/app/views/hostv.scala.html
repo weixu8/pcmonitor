@@ -5,10 +5,10 @@
 	<script src="@routes.Assets.at("js/host.js")" type="text/javascript"></script>
 } { 
 	@if(!error.isEmpty()) {
-		<h1>Host id is <span id="hostId">@hostId</span>. <span class="stringError">@error<span></h1>
+		<p class="titles">Host id is <span id="hostId">@hostId</span>. <span class="stringError">@error<span></p>
 	} else {
-		<p> Host id is <span id="hostId">@hostId</span></p>
-		<p> Screenshots: </p>
+		<p class="titles"> Host id is <span id="hostId">@hostId</span></p>
+		<p class="titles"> Screenshots: </p>
 		<div id="screenshots"></div>
 	}
 }

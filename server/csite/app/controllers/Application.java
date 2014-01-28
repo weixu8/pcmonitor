@@ -9,6 +9,7 @@ import java.util.Set;
 import com.cserver.shared.Db;
 import com.cserver.shared.DbHost;
 import com.cserver.shared.DbResult;
+import com.cserver.shared.DbScrnshot;
 import com.cserver.shared.DbUser;
 import com.cserver.shared.Errors;
 import com.cserver.shared.IDbEnv;
@@ -135,13 +136,12 @@ public class Application extends Controller {
 		DbUser user = db.impersonate(session);
 		if (user == null)
 			return redirect("/login");
-		
-		Set<String> hosts = db.getHosts(user.clientId);
-		if (!hosts.contains(hostId)) {
-			return ok(host.render(hostId, "Information about this host doesn't exists."));
-		}
-		
-		return ok(host.render(hostId, ""));
+
+		DbHost host = db.refHost(user, hostId);
+		if (host == null)
+			return ok(hostv.render(hostId, "Information about this host doesn't exists."));
+				
+		return ok(hostv.render(hostId, ""));
     }
     
     public static Result screenshot(String hostId, long id) {
@@ -154,14 +154,12 @@ public class Application extends Controller {
 		if (user == null)
 			return notFound();
 		
-		Set<String> hosts = db.getHosts(user.clientId);
-		if (!hosts.contains(hostId))
+		DbHost host = db.refHost(user, hostId);
+		if (host == null)
 			return notFound();
 
-		DbHost host = new DbHost(db, user.clientId, hostId);
-
-    	File screenshot = db.getHostScreenshot(host, id);
-    	return ok(screenshot);
+    	DbScrnshot screen = db.hostScreenshot(host, id);
+    	return ok(screen.file);
     }
     
     public static Result screenshots(String hostId, int start, int end) {
@@ -177,13 +175,20 @@ public class Application extends Controller {
 		if (user == null)
 			return ok(JsonHelper.mapToString(map));
 		
-		Set<String> hosts = db.getHosts(user.clientId);
-		if (!hosts.contains(hostId))
+		DbHost host = db.refHost(user, hostId);
+		if (host == null)
 			return ok(JsonHelper.mapToString(map));
 		
-		List<Long> picsIds = db.getHostScreenshots(hostId, start, end);
-		map.put("error", "0");
-		map.put("picIds", JsonHelper.longListToString(picsIds));
+		List<Long> ids = db.hostScreenshots(host, start, end);
+		Map<Long, String> idsToTime = new HashMap<Long, String>();
+		for (Long id : ids) {
+			DbScrnshot screen = db.hostScreenshot(host, id);
+			idsToTime.put(id, screen.time);
+		}
+		
+		map.put("error", "0");		
+		map.put("ids", JsonHelper.longListToString(ids));
+		map.put("idsToTime", JsonHelper.mapLStoString(idsToTime));
 		
 		return ok(JsonHelper.mapToString(map));
     }

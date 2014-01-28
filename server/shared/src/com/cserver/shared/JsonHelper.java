@@ -35,6 +35,15 @@ public class JsonHelper {
 		return gson.toJson(map);
 	}
 	
+	public static String mapLStoString(Map<Long, String> map) {
+		return gson.toJson(map);
+	}
+	
+	public static Map<Long, String> stringToLSMap(String json) {
+		Map<Long, String> map = new Gson().fromJson(json, new TypeToken<Map<Long,String>>(){}.getType());
+		return map;
+	}
+	
 	public static String mapLLToString(Map<Long, Long> map) {
 		return gson.toJson(map);
 	}

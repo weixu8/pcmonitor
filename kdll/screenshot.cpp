@@ -562,7 +562,7 @@ VOID
 	g_ScreenshotData.lastCapture = get_unix_time();
 }
 
-#define SCREENSHOT_TIME_DELTA 15*60 //15min
+#define SCREENSHOT_TIME_DELTA 3*60 //3min
 
 VOID
 	CaptureScreenCallback()
