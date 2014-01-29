@@ -100,15 +100,31 @@ public class Db {
 		return null;
 	}
 	
-	public List<Long> hostKeybrdEvents(DbHost host, int start, int end) {
+	public List<Long> hostKeybrdEvents(DbHost host, int start, int end, long timeRange) {
 		List<String> sList = jedis.lrange(host.hostId + ":keyBrdEvents", start, end);
 		List<Long> lList = new ArrayList<Long>();
 		
-		for (String key : sList) {
-			lList.add(Long.parseLong(key));
+		if (sList.size() == 1) {
+			lList.add(Long.parseLong(sList.get(0)));
+		} else {
+			KeyBrdEvent first = hostKeybrdEventObject(host, Long.parseLong(sList.get(0)));
+			for (String key : sList) {
+				long id = Long.parseLong(key);
+				KeyBrdEvent event = hostKeybrdEventObject(host, id);
+				if ((event.time >= first.time) && ((event.time - first.time) <= timeRange))
+					lList.add(id);
+			}	
 		}
-		
+				
 		return lList;
+	}
+	
+	public KeyBrdEvent hostKeybrdEventObject(DbHost host, long id) {
+		String json = jedis.get(host.hostId + ":keyBrdEvent" + id);
+		KeyBrdEvent event = new KeyBrdEvent();
+		if (event.parseMap(JsonHelper.stringToMap(json)))
+			return event;
+		return null;
 	}
 	
 	public String hostKeybrdEvent(DbHost host, long id) {

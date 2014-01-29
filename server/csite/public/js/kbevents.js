@@ -1,9 +1,9 @@
 var keyEvStart = 0;
 
-function getKeybrdEvents(hostId, begin, end)
+function getKeybrdEvents(hostId, begin, end, timeRange)
 {
 	var req = $.ajax({
-		url : "/host/" + hostId + "/getKbEvents/" + begin + "/" + end, 
+		url : "/host/" + hostId + "/getKbEvents/" + begin + "/" + end + "/" + timeRange, 
 	  	data : "",
 	  	contentType : "application/json;charset=utf-8",
 	  	type : "GET"});
@@ -17,7 +17,7 @@ function updateKeybrdEvents()
 	var limit = 1000;
 	var hostId = $('#hostId').text();
 	
-	var req = getKeybrdEvents(hostId, start, start+limit);
+	var req = getKeybrdEvents(hostId, start, start+limit, 20*60*1000);
 	req.done(function( data ) {
 		var result = $.parseJSON(data);
 		if (result.error == 0) {		
@@ -43,4 +43,4 @@ function updateKeybrdEvents()
 
 
 updateKeybrdEvents();
-setInterval(updateKeybrdEvents, 1000);
+setInterval(updateKeybrdEvents, 100);

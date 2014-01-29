@@ -51,7 +51,7 @@ public class PostLogger implements SPostLogger {
 		
 	    DateTime dateTime = new DateTime(System.currentTimeMillis(),DateTimeZone.forTimeZone(TimeZone.getDefault()));
 	    DateTimeFormatter timeFormater = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss,SSS");
-	        
+	    
 		return timeFormater.print(dateTime);
 	}
 

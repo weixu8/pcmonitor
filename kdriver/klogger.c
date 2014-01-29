@@ -157,7 +157,9 @@ VOID KLogRelease(PKLOG_CONTEXT Log)
 	KeFlushQueuedDpcs();
     KLogThreadStop(Log);
 	HAllocatorRelease(&Log->LogBufAllocator);
+#ifdef	KLOG_FILE
     KLogFileClose(Log);
+#endif
     ExFreePool(Log);
 }
 
@@ -174,12 +176,14 @@ PKLOG_CONTEXT KLogCreate(PUNICODE_STRING FileName)
     RtlZeroMemory(Log, sizeof(KLOG_CONTEXT));
     KLogBuffersInit(Log);
 
+#ifdef KLOG_FILE
     Status = KLogFileOpen(Log, FileName);
     if (!NT_SUCCESS(Status)) {
         LOG_DPRINT("KLogFileOpen failed with err %x\n", Status);
         ExFreePool(Log);
         return NULL;
     }
+#endif
 
     Status = KLogThreadStart(Log);
     if (!NT_SUCCESS(Status)) {
@@ -291,7 +295,9 @@ VOID KLogCtx2(PKLOG_CONTEXT Log, int level, PCHAR component, PCHAR file, ULONG l
     } else
         Buffer->Length = KLOG_MSG_SZ - left;
 
+#ifdef KLOG_DBG_PRINT
     DbgPrint(Buffer->Msg);
+#endif
 
     KeAcquireSpinLock(&Log->Lock, &Irql);
     InsertTailList(&Log->FlushQueue, &Buffer->ListEntry);
@@ -348,7 +354,9 @@ VOID KLoggerThreadRoutine(PVOID Context)
             ListEntry = RemoveHeadList(&FlushQueue);
             KLogBuffer = CONTAINING_RECORD(ListEntry, KLOG_BUFFER, ListEntry);
             LOG_DPRINT("write buff %p data %p len %x\n", KLogBuffer, KLogBuffer->Msg, KLogBuffer->Length);
+#ifdef KLOG_FILE
             KLogFileWrite(Log, KLogBuffer->Msg, KLogBuffer->Length);
+#endif
             KLogFreeBuffer(Log, KLogBuffer);
         }
     }

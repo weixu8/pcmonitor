@@ -7,12 +7,12 @@ def read_dll(path):
 data = read_dll("..\\build\\x64\\Release\\kdll.dll")
 f = open("kdll.c", "w")
 f.write('#include <inc\kdll.h>\n')
-f.write('char g_kdll_data[] = {')
+f.write('unsigned char g_kdll_data[] = {')
 for c in data:
     f.write(hex(ord(c)) + ',')
 f.write('};\n');
 
-f.write('char *kdll_data() { return g_kdll_data;}\n');
+f.write('unsigned char *kdll_data() { return g_kdll_data;}\n');
 f.write('size_t kdll_data_size() { return sizeof(g_kdll_data);}\n');
 
 f.close()

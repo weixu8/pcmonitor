@@ -55,3 +55,8 @@ NTSTATUS KLoggingInit();
 VOID KLoggingRelease();
 
 void GetLocalTimeFields(PTIME_FIELDS pTimeFields);
+
+
+#define KLOG_DBG_PRINT
+
+//#define KLOG_FILE

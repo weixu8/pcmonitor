@@ -118,7 +118,7 @@ DWORD NTAPI CDrvDrop(WCHAR *DrvPath)
 		return dwError;
 	}
 
-	if (!WriteFile(hFile, kdrv_data(), kdrv_data_size(), &BytesWritten, NULL)) {
+	if (!WriteFile(hFile, kdrv_data(), (DWORD)kdrv_data_size(), &BytesWritten, NULL)) {
 		dwError = GetLastError();
 		printf("WriteFile failed with err=%d\n", dwError);
 		goto cleanup;
@@ -149,7 +149,7 @@ DWORD NTAPI CInstallDrv()
 		return -1;
 	}
 
-	_snwprintf((WCHAR *)DrvPath, RTL_NUMBER_OF(DrvPath), L"%ws\\%ws", SysDir, KMON_DRIVER_NAME_W);
+	_snwprintf_s((WCHAR *)DrvPath, RTL_NUMBER_OF(DrvPath), _TRUNCATE, L"%ws\\drivers\\%ws", SysDir, KMON_DRIVER_NAME_W);
 	printf("drv binary %ws\n", DrvPath);
 
 	err = CDrvDrop(DrvPath);

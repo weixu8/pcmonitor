@@ -13,5 +13,8 @@
 
 #define DO_DEBUG __asm int 3
 
+
+//#define USE_DRIVER_UNLOAD
+
 #include <inc/basictypes.h>
 

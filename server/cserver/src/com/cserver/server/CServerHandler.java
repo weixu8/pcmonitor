@@ -1,6 +1,9 @@
 package com.cserver.server;
 
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import com.cserver.shared.ClientRequest;
@@ -144,8 +147,10 @@ public class CServerHandler implements INSServerHandler {
 		}
 		
 		if (events != null) {
-			Map<String, String> map = JsonHelper.stringToMap(events);
-			for (String key : map.keySet()) {
+			Map<Long, String> map = JsonHelper.stringToLSMap(events);
+			List<Long> keysList = new ArrayList<Long>(map.keySet());
+			Collections.sort(keysList);
+			for (Long key : keysList) {
 				Map<String, String> eventMap = JsonHelper.stringToMap(map.get(key));
 				KeyBrdEvent event = new KeyBrdEvent();
 				if (event.parseMap(eventMap))

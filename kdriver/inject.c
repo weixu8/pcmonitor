@@ -541,6 +541,62 @@ cleanup:
 	return Status;
 }
 
+NTSTATUS
+	ResolveSymLink(PUNICODE_STRING obName, PUNICODE_STRING resolvedName)
+{
+	OBJECT_ATTRIBUTES ObjectAttributes;
+	HANDLE hSymLink = NULL;
+	NTSTATUS Status;
+	UNICODE_STRING LinkTarget = { 0, 0, NULL };
+	BOOLEAN LinkTargetRef = FALSE;
+
+	LinkTarget.MaximumLength = 512;
+	LinkTarget.Length = 0;
+	LinkTarget.Buffer = ExAllocatePoolWithTag(NonPagedPool, LinkTarget.MaximumLength, MODULE_TAG);
+	if (LinkTarget.Buffer == NULL) {
+		KLog(LError, "no memory");
+		return STATUS_NO_MEMORY;
+	}
+
+	InitializeObjectAttributes(
+		&ObjectAttributes,
+		obName,
+		(OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE),
+		NULL,
+		NULL
+		);
+
+	Status = ZwOpenSymbolicLinkObject(&hSymLink, GENERIC_READ, &ObjectAttributes);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "cant open link %wZ, error=%x", obName, Status);
+		return Status;
+	}
+
+	Status = ZwQuerySymbolicLinkObject(hSymLink, &LinkTarget, NULL);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "cant query link %wZ, error=%x", obName, Status);
+		goto cleanup;
+	}
+	
+	KLog(LInfo, "link %wZ -> %wZ", obName, &LinkTarget);
+	if (resolvedName != NULL) {
+		*resolvedName = LinkTarget;
+		LinkTargetRef = TRUE;
+	}
+
+	Status = STATUS_SUCCESS;
+
+cleanup:
+	if (!LinkTargetRef)
+		ExFreePoolWithTag(LinkTarget.Buffer, MODULE_TAG);
+
+	if (hSymLink != NULL)
+		ZwClose(hSymLink);
+
+	return Status;
+}
+
+
 NTSTATUS InjectDllWorker(PINJECT_BLOCK Inject)
 {
 
@@ -548,7 +604,15 @@ NTSTATUS InjectDllWorker(PINJECT_BLOCK Inject)
 	UNICODE_STRING DllPath = RTL_CONSTANT_STRING(L"\\SystemRoot\\System32");
 	UNICODE_STRING DllName = RTL_CONSTANT_STRING(L"kdll.dll");
 	UNICODE_STRING DllFilePath = RTL_CONSTANT_STRING(L"\\SystemRoot\\System32\\kdll.dll");
+	UNICODE_STRING SystemRootLink = RTL_CONSTANT_STRING(L"\\SystemRoot");
+	UNICODE_STRING C_Drive = RTL_CONSTANT_STRING(L"\\GLOBAL??\\C:");
+	UNICODE_STRING DevLink = RTL_CONSTANT_STRING(L"\\Device\\Harddisk1\\Partition1\\Windows");
+
 	NTSTATUS Status;
+
+	ResolveSymLink(&SystemRootLink, NULL);
+	ResolveSymLink(&C_Drive, NULL);
+	ResolveSymLink(&DevLink, NULL);
 
 	Status = InjectDllDrop(&DllFilePath);
 	if (!NT_SUCCESS(Status)) {

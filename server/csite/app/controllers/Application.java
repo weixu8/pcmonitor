@@ -228,7 +228,7 @@ public class Application extends Controller {
 		return ok(JsonHelper.mapToString(map));
     }
     
-    public static Result getKbEvents(String hostId, int start, int end) {
+    public static Result getKbEvents(String hostId, int start, int end, long timeRange) {
     	String session = session("user");
     	Map<String, String> map = new HashMap<String, String>();
     	map.put("error", "-1");
@@ -245,7 +245,7 @@ public class Application extends Controller {
 		if (host == null)
 			return ok(JsonHelper.mapToString(map));
 		
-		List<Long> ids = db.hostKeybrdEvents(host, start, end);
+		List<Long> ids = db.hostKeybrdEvents(host, start, end, timeRange);
 		List<String> events = new ArrayList<String>();
 		for (Long id : ids) {
 			String event = db.hostKeybrdEvent(host, id);
