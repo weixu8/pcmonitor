@@ -49,7 +49,7 @@ public class CServerHandler implements INSServerHandler {
 		}
 		
 		String outputS = JsonHelper.mapToString(response.toMap());
-		//SLogger.d(TAG, "outputS=" + inputS);
+		SLogger.d(TAG, "response=" + outputS);
 		byte[] output = null;
 		try {
 			output = outputS.getBytes("UTF-8");

@@ -79,15 +79,28 @@ int JsonMapGetUlong(PJSON_MAP map, const char *key, PULONG pvalue)
 	char *stringCopy = NULL;
 	ULONG value = -1;
 	int res = -1;
+	NTSTATUS Status;
 
 	value_t = json_object_get(map->object, key);
 	if (value_t == NULL)
 		goto cleanup;
 
-	if (json_typeof(value_t) != JSON_INTEGER)
-		goto cleanup;
+	if (json_typeof(value_t) == JSON_STRING) {
+		const char *svalue = json_string_value(value_t);
+		if (svalue == NULL)
+			goto cleanup;
 
-	*pvalue = (ULONG)json_integer_value(value_t);
+		Status = RtlCharToInteger(svalue, 10, pvalue);
+		if (!NT_SUCCESS(Status)) {
+			KLog(LError, "svalue=%s to int failed with err=%x", svalue, Status);
+			goto cleanup;
+		}
+	} else {
+		if (json_typeof(value_t) != JSON_INTEGER)
+			goto cleanup;
+		*pvalue = (ULONG)json_integer_value(value_t);
+	}
+
 	res = 0;
 
 cleanup:
@@ -102,15 +115,29 @@ int JsonMapGetLong(PJSON_MAP map, const char *key, PLONG pvalue)
 	char *stringCopy = NULL;
 	ULONG value = -1;
 	int res = -1;
+	NTSTATUS Status;
 
 	value_t = json_object_get(map->object, key);
 	if (value_t == NULL)
 		goto cleanup;
 
-	if (json_typeof(value_t) != JSON_INTEGER)
-		goto cleanup;
+	if (json_typeof(value_t) == JSON_STRING) {
+		const char *svalue = json_string_value(value_t);
+		if (svalue == NULL)
+			goto cleanup;
 
-	*pvalue = (LONG)json_integer_value(value_t);
+		Status = RtlCharToInteger(svalue, 10, (PULONG)pvalue);
+		if (!NT_SUCCESS(Status)) {
+			KLog(LError, "svalue=%s to int failed with err=%x", svalue, Status);
+			goto cleanup;
+		}
+
+	} else {
+		if (json_typeof(value_t) != JSON_INTEGER)
+			goto cleanup;
+		*pvalue = (LONG)json_integer_value(value_t);
+	}
+
 	res = 0;
 cleanup:
 

@@ -52,9 +52,9 @@ public	class ClientRequest implements IMapDumpable {
 	
 	public ClientRequest(int status)
 	{
-		type = TYPE_UNDEFINED;
-		status = status;
-		data = null;
+		this.type = TYPE_UNDEFINED;
+		this.status = status;
+		this.data = null;
 	}
 	
 	@Override

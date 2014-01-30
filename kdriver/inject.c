@@ -208,6 +208,39 @@ NTSTATUS
 	return Status;
 }
 
+int
+	InjectDllProcessUpdateStubData(PPROCESS_ENTRY Entry)
+{
+	PEPROCESS Process = Entry->Process;
+	KAPC_STATE ApcState;
+	PSTUB_DATA pStubData = NULL;
+	NTSTATUS Status;
+
+	pStubData = Entry->InjectInfo.pStubData;
+	if (pStubData == NULL)
+		return 0;
+
+
+	Status = PsAcquireProcessExitSynchronization(Process);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "cant acquire process=%p exit synch", Process);
+		return -1;
+	}
+
+	KeStackAttachProcess(Process, &ApcState);
+	Entry->InjectInfo.Inited = pStubData->Inited;
+	Entry->InjectInfo.Loaded = pStubData->Loaded;
+	KeUnstackDetachProcess(&ApcState);
+
+	PsReleaseProcessExitSynchronization(Process);
+
+	KLog(LInfo, "entry=%p proc=%p stub inited=%p", Entry, Process, Entry->InjectInfo.Inited);
+	KLog(LInfo, "entry=%p proc=%p dll loaded=%p", Entry, Process, Entry->InjectInfo.Loaded);
+
+	return 0;
+
+}
+
 NTSTATUS
 	InjectDllProcess(PPROCESS_ENTRY Entry, HANDLE ProcessHandle, PEPROCESS Process, PSYSTEM_PROCESS_INFORMATION ProcInfo, ULONG_PTR ProcInfoBarrier, PUNICODE_STRING DllPath, PUNICODE_STRING DllName)
 {
@@ -219,15 +252,13 @@ NTSTATUS
 	PETHREAD Thread = NULL;
 	ULONG InjectedCount = 0;
 	PSTUB_DATA pStubData = NULL;
-
+	PSYSTEM_THREAD_INFORMATION ThreadInfo = NULL;
 
 	Status = InjectProcessAllocateCode(ProcessHandle, &pStubData, &pStubSize);
 	if (!NT_SUCCESS(Status)) {
 		KLog(LError, "Allocate stub for proc=%p failed with err=%x", Process, Status);
-		Entry->InjectInfo.InjectStatus = Status;
 		return Status;
 	}
-	Entry->InjectInfo.pStubData = pStubData;
 
 	KLog(LInfo, "pStubCode=%p, pStubSize=%x, proc=%p", pStubData, pStubSize, Process);
 
@@ -238,11 +269,10 @@ NTSTATUS
 	if (!NT_SUCCESS(Status)) {
 		goto free_mem;
 	}
-	
-	Entry->InjectInfo.StubSetup = TRUE;
 
-	PSYSTEM_THREAD_INFORMATION ThreadInfo = (PSYSTEM_THREAD_INFORMATION)((ULONG_PTR)ProcInfo + sizeof(SYSTEM_PROCESS_INFORMATION));
+	Entry->InjectInfo.pStubData = pStubData;
 
+	ThreadInfo = (PSYSTEM_THREAD_INFORMATION)((ULONG_PTR)ProcInfo + sizeof(SYSTEM_PROCESS_INFORMATION));
 	for (Index = 0; Index < ProcInfo->NumberOfThreads; Index++) {
 		if ((ProcInfo->NextEntryOffset != 0) && ((ULONG_PTR)ThreadInfo + sizeof(SYSTEM_THREAD_INFORMATION)) > ((ULONG_PTR)ProcInfo + ProcInfo->NextEntryOffset))
 			break;
@@ -272,23 +302,19 @@ _next_thread:
 		ThreadInfo = (PSYSTEM_THREAD_INFORMATION)((ULONG_PTR)ThreadInfo + sizeof(SYSTEM_THREAD_INFORMATION));
 	}
 
-	Entry->InjectInfo.ThreadApcQueuedCount = InjectedCount;
+	Entry->InjectInfo.ApcQueuedCount = InjectedCount;
 
 	KLog(LInfo, "proc=%p, InjectedCount=%x", Process, InjectedCount);
 	if (InjectedCount > 0) {
 		LARGE_INTEGER Timeout;
 
 		RtlZeroMemory(&Timeout, sizeof(Timeout));
-		Timeout.QuadPart = -500*1000*10;//500ms
+		Timeout.QuadPart = -1000*1000*10;//1s
 		KeDelayExecutionThread(KernelMode, FALSE, &Timeout);
 
-		KeStackAttachProcess(Process, &ApcState);
-		Status = (pStubData->Inited) ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
-		KeUnstackDetachProcess(&ApcState);
-		if (NT_SUCCESS(Status)) {
-			Entry->InjectInfo.StubCalled = TRUE;
-			KLog(LInfo, "Injection SUCCESS for proc=%p", Process);
-		}
+		InjectDllProcessUpdateStubData(Entry);
+		
+		Status = STATUS_SUCCESS;
 	} else {
 		Status = STATUS_UNSUCCESSFUL;
 free_mem:
@@ -299,7 +325,6 @@ free_mem:
 		}
 	}
 
-	Entry->InjectInfo.InjectStatus = Status;
 	return Status;
 }
 
@@ -410,9 +435,35 @@ NTSTATUS
 		goto cleanup;
 	}
 
-	Entry = ProcessEntryCreate(&MonitorGetInstance()->ProcessTable, Process);
+	Entry = ProcessEntryLookup(&MonitorGetInstance()->ProcessTable, Process);
 	if (Entry == NULL) {
-//		KLog(LInfo, "Process=%p already injected", Process);
+		Entry = ProcessEntryCreate(&MonitorGetInstance()->ProcessTable, Process);
+		if (Entry == NULL) {
+			KLog(LInfo, "Process=%p already injected", Process);
+			Status = STATUS_SUCCESS;
+			goto cleanup;
+		}
+	}
+
+	if (0 != InjectDllProcessUpdateStubData(Entry)) {
+		KLog(LError, "cant updata stubdata for entry=%p, process=%p", Entry, Entry->Process);
+		goto cleanup;
+	}
+
+	if (Entry->InjectInfo.Loaded) {
+		KLog(LInfo, "Process=%p already injected, dll loaded at %p", Process, Entry->InjectInfo.Loaded);
+		Status = STATUS_SUCCESS;
+		goto cleanup;
+	}
+
+	if (Entry->InjectInfo.Inited) {
+		KLog(LInfo, "Process=%p already injected, stub called", Process);
+		Status = STATUS_SUCCESS;
+		goto cleanup;
+	}
+	
+	if (Entry->InjectInfo.ApcQueuedCount) {
+		KLog(LInfo, "Process=%p already injected, ApcQueuedCount=%d", Process, Entry->InjectInfo.ApcQueuedCount);
 		Status = STATUS_SUCCESS;
 		goto cleanup;
 	}

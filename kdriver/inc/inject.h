@@ -5,10 +5,9 @@
 
 typedef struct _INJECT_INFO {
 	PVOID		pStubData;
-	BOOLEAN		StubSetup;
-	ULONG		ThreadApcQueuedCount;
-	BOOLEAN		StubCalled;
-	NTSTATUS	InjectStatus;
+	ULONG		ApcQueuedCount;
+	ULONG_PTR	Inited;
+	ULONG_PTR	Loaded;
 } INJECT_INFO, *PINJECT_INFO;
 
 typedef struct _INJECT_BLOCK {
