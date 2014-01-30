@@ -494,6 +494,49 @@ _next_process:
 	return STATUS_SUCCESS;
 }
 
+NTSTATUS
+	InjectDllCheckAlreadyExists(PUNICODE_STRING DllFilePath, BOOLEAN *pbExists)
+{
+	OBJECT_ATTRIBUTES ObjectAttrib;
+	NTSTATUS Status;
+	HANDLE FileHandle = NULL;
+	IO_STATUS_BLOCK IoStatusBlock;
+
+	*pbExists = FALSE;
+
+	InitializeObjectAttributes(
+		&ObjectAttrib,
+		DllFilePath,
+		OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE,
+		NULL,
+		NULL);
+
+	Status =
+		ZwCreateFile(
+		&FileHandle,
+		GENERIC_READ | SYNCHRONIZE,
+		&ObjectAttrib,
+		&IoStatusBlock,
+		0L,
+		FILE_ATTRIBUTE_NORMAL,
+		FILE_SHARE_READ,
+		FILE_OPEN,
+		FILE_SYNCHRONOUS_IO_NONALERT,
+		NULL,
+		0);
+
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "Open file failed with err=%x", Status);
+		return Status;
+	}
+	
+	ZwClose(FileHandle);
+
+	*pbExists = TRUE;
+
+	return Status;
+}
+
 NTSTATUS InjectDllDrop(PUNICODE_STRING DllFilePath)
 {
 	OBJECT_ATTRIBUTES ObjectAttrib;
@@ -596,31 +639,350 @@ cleanup:
 	return Status;
 }
 
+int PathSplitByLastComponent(PUNICODE_STRING path, PUNICODE_STRING remain)
+{
+	LONG Index;
+	BOOLEAN bIndexFound = FALSE;
+
+	for (Index = (path->Length - remain->Length)/ sizeof(WCHAR) - 1; Index >= 0; Index--) {
+		if (path->Buffer[Index] == L'\\') {
+			bIndexFound = TRUE;
+			break;
+		}
+	}
+
+	if (!bIndexFound)
+		return -1;
+	
+	remain->Buffer = ((PWCHAR)path->Buffer + Index);
+	remain->Length = path->Length - Index*sizeof(WCHAR);
+	remain->MaximumLength = remain->Length;
+
+	return 0;
+}
+
+NTSTATUS
+	ResolveSymPathStep(PUNICODE_STRING symPath, PUNICODE_STRING TargetName)
+{
+	UNICODE_STRING currSymPath = { 0, 0, NULL };
+	UNICODE_STRING resolvedName = { 0, 0, NULL };
+	UNICODE_STRING remainName = { 0, 0, NULL };
+	NTSTATUS Status;
+
+	RtlZeroMemory(TargetName, sizeof(UNICODE_STRING));
+	currSymPath = *symPath;
+
+	while (TRUE) {
+		Status = ResolveSymLink(&currSymPath, &resolvedName);
+		if (NT_SUCCESS(Status)) {
+			break;
+		}
+
+		if (0 != PathSplitByLastComponent(symPath, &remainName)) {
+			KLog(LError, "PathSplitComponent failed");
+			Status = STATUS_UNSUCCESSFUL;
+			goto cleanup;
+		}
+		
+		currSymPath.Length = symPath->Length - remainName.Length;
+		currSymPath.MaximumLength = currSymPath.Length;
+
+		KLog(LInfo, "currSymPath=%wZ, remainName=%wZ", &currSymPath, &remainName);
+
+		if (currSymPath.Length == 0) {
+			KLog(LError, "reached beginning of path");
+			Status = STATUS_NOT_FOUND;
+			goto cleanup;
+		}
+	}
+
+	TargetName->MaximumLength = resolvedName.Length + remainName.Length + sizeof(WCHAR);
+	TargetName->Length = 0;
+	TargetName->Buffer = ExAllocatePoolWithTag(NonPagedPool, TargetName->MaximumLength, MODULE_TAG);
+	if (TargetName->Buffer == NULL) {
+		KLog(LError, "No memory");
+		Status = STATUS_NO_MEMORY;
+		goto cleanup;
+	}
+
+	RtlZeroMemory(TargetName->Buffer, TargetName->MaximumLength);
+	Status = RtlAppendUnicodeStringToString(TargetName, &resolvedName);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "RtlAppendUnicodeStringToString failed with err=%x", Status);
+		goto cleanup;
+	}
+
+	if (remainName.Length > 0) {
+		Status = RtlAppendUnicodeStringToString(TargetName, &remainName);
+		if (!NT_SUCCESS(Status)) {
+			KLog(LError, "RtlAppendUnicodeStringToString failed with err=%x", Status);
+			goto cleanup;
+		}
+	}
+
+	Status = STATUS_SUCCESS;
+
+cleanup:
+	if (resolvedName.Buffer != NULL)
+		ExFreePoolWithTag(resolvedName.Buffer, MODULE_TAG);
+
+	if (!NT_SUCCESS(Status)) {
+		if (TargetName->Buffer != NULL)
+			ExFreePoolWithTag(TargetName->Buffer, MODULE_TAG);
+	
+		RtlZeroMemory(TargetName, sizeof(UNICODE_STRING));
+	}
+
+	return Status;
+}
+
+NTSTATUS ResolveSymPath(PUNICODE_STRING Path, PUNICODE_STRING resolvedName) {
+	NTSTATUS Status;
+	UNICODE_STRING targetName = { 0, 0, NULL };
+	UNICODE_STRING currName = { 0, 0, NULL };
+
+	RtlZeroMemory(resolvedName, sizeof(UNICODE_STRING));
+	
+	currName.MaximumLength = Path->Length + sizeof(WCHAR);
+	currName.Length = 0;
+	currName.Buffer = ExAllocatePoolWithTag(NonPagedPool, Path->Length + sizeof(WCHAR), MODULE_TAG);
+	if (currName.Buffer == NULL) {
+		KLog(LError, "No memory");
+		return STATUS_NO_MEMORY;
+	}
+
+	RtlZeroMemory(currName.Buffer, currName.MaximumLength);
+
+	Status = RtlAppendUnicodeStringToString(&currName, Path);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "RtlAppendUnicodeStringToString failed with err=%x", Status);
+		ExFreePoolWithTag(currName.Buffer, MODULE_TAG);
+		return Status;
+	}
+
+	while (TRUE) {
+		Status = ResolveSymPathStep(&currName, &targetName);
+		if (!NT_SUCCESS(Status)) {
+			break;
+		}
+
+		ExFreePoolWithTag(currName.Buffer, MODULE_TAG);
+		currName = targetName;
+	}
+
+	if (NT_SUCCESS(Status)) {
+		__debugbreak();
+		return STATUS_UNSUCCESSFUL;
+	}
+
+
+	if (Status == STATUS_NOT_FOUND) {
+		*resolvedName = currName;
+		return STATUS_SUCCESS;
+	} else {
+		ExFreePoolWithTag(currName.Buffer, MODULE_TAG);
+		return Status;
+	}
+}
+
+
+WCHAR DriveLetters[] = L"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+WCHAR *DriveLinks[] = {
+	L"\\GLOBAL??\\A:",
+	L"\\GLOBAL??\\B:",
+	L"\\GLOBAL??\\C:",
+	L"\\GLOBAL??\\D:",
+	L"\\GLOBAL??\\E:",
+	L"\\GLOBAL??\\F:",
+	L"\\GLOBAL??\\G:",
+	L"\\GLOBAL??\\H:",
+	L"\\GLOBAL??\\I:",
+	L"\\GLOBAL??\\J:",
+	L"\\GLOBAL??\\K:",
+	L"\\GLOBAL??\\L:",
+	L"\\GLOBAL??\\M:",
+	L"\\GLOBAL??\\N:",
+	L"\\GLOBAL??\\O:",
+	L"\\GLOBAL??\\P:",
+	L"\\GLOBAL??\\Q:",
+	L"\\GLOBAL??\\R:",
+	L"\\GLOBAL??\\S:",
+	L"\\GLOBAL??\\T:",
+	L"\\GLOBAL??\\U:",
+	L"\\GLOBAL??\\V:",
+	L"\\GLOBAL??\\W:",
+	L"\\GLOBAL??\\X:",
+	L"\\GLOBAL??\\Y:",
+	L"\\GLOBAL??\\Z:"
+};
+
+WCHAR *umDrivePrefixes[] = {
+	L"\\\\?\\A:",
+	L"\\\\?\\B:",
+	L"\\\\?\\C:",
+	L"\\\\?\\D:",
+	L"\\\\?\\E:",
+	L"\\\\?\\F:",
+	L"\\\\?\\G:",
+	L"\\\\?\\H:",
+	L"\\\\?\\I:",
+	L"\\\\?\\J:",
+	L"\\\\?\\K:",
+	L"\\\\?\\L:",
+	L"\\\\?\\M:",
+	L"\\\\?\\N:",
+	L"\\\\?\\O:",
+	L"\\\\?\\P:",
+	L"\\\\?\\Q:",
+	L"\\\\?\\R:",
+	L"\\\\?\\S:",
+	L"\\\\?\\T:",
+	L"\\\\?\\U:",
+	L"\\\\?\\V:",
+	L"\\\\?\\W:",
+	L"\\\\?\\X:",
+	L"\\\\?\\Y:",
+	L"\\\\?\\Z:"
+};
+
+NTSTATUS
+	CRtlPrefixUnicodeStringReplace(PUNICODE_STRING Prefix, PUNICODE_STRING Replacement, PUNICODE_STRING Source, PUNICODE_STRING Destination)
+{
+	UNICODE_STRING target = { 0, 0, NULL };
+	UNICODE_STRING sourceRemains = { 0, 0, NULL };
+	NTSTATUS Status;
+
+	if (!RtlPrefixUnicodeString(Prefix, Source, TRUE)) {
+		return STATUS_NOT_FOUND;
+	}
+	
+	target.MaximumLength = Replacement->Length + Source->Length - Prefix->Length + sizeof(WCHAR);
+	target.Length = 0;
+	target.Buffer = ExAllocatePoolWithTag(NonPagedPool, target.MaximumLength, MODULE_TAG);
+	if (target.Buffer == NULL) {
+		return STATUS_NO_MEMORY;
+	}
+	RtlZeroMemory(target.Buffer, target.MaximumLength);
+
+	Status = RtlAppendUnicodeStringToString(&target, Replacement);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "RtlAppendUnicodeStringToString failed with err=%x", Status);
+		goto cleanup;
+	}
+
+	sourceRemains.Buffer = (PWCHAR)Source->Buffer + Prefix->Length/sizeof(WCHAR);
+	sourceRemains.Length = Source->Length - Prefix->Length;
+	sourceRemains.MaximumLength = sourceRemains.Length;
+	
+	Status = RtlAppendUnicodeStringToString(&target, &sourceRemains);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LError, "RtlAppendUnicodeStringToString failed with err=%x", Status);
+		goto cleanup;
+	}
+
+	Status = STATUS_SUCCESS;
+	*Destination = target;
+
+cleanup:
+	if (!NT_SUCCESS(Status)) {
+		if (target.Buffer != NULL)
+			ExFreePoolWithTag(target.Buffer, MODULE_TAG);
+	}
+
+	return Status;
+}
+
+NTSTATUS
+	ResolveSystemRootPathToUmPath(PUNICODE_STRING SystemRootLink, PUNICODE_STRING UmPath)
+{
+	NTSTATUS Status;
+	UNICODE_STRING systemRootVolumePath = { 0, 0, NULL };
+	LONG Index;
+	UNICODE_STRING usDriveLink = { 0, 0, NULL };
+	UNICODE_STRING volumeName = { 0, 0, NULL };
+	UNICODE_STRING umDrivePrefix = { 0, 0, NULL };
+	BOOLEAN found = FALSE;
+
+	RtlZeroMemory(UmPath, sizeof(UNICODE_STRING));
+	Status = ResolveSymPath(SystemRootLink, &systemRootVolumePath);
+	if (!NT_SUCCESS(Status)) {
+		return Status;
+	}
+
+	KLog(LInfo, "systemRootVolumePath=%wZ", &systemRootVolumePath);
+	for (Index = 0; Index < wcslen(DriveLetters); Index++) {
+		RtlInitUnicodeString(&usDriveLink, DriveLinks[Index]);
+
+		Status = ResolveSymLink(&usDriveLink, &volumeName);
+		if (!NT_SUCCESS(Status))
+			continue;
+
+		RtlInitUnicodeString(&umDrivePrefix, umDrivePrefixes[Index]);
+
+		Status = CRtlPrefixUnicodeStringReplace(&volumeName, &umDrivePrefix, &systemRootVolumePath, UmPath);
+		ExFreePoolWithTag(volumeName.Buffer, MODULE_TAG);
+
+		if (Status == STATUS_SUCCESS) {
+			found = TRUE;
+			goto cleanup;
+		}
+	}
+	
+cleanup:
+	if (!found)
+		Status = STATUS_NOT_FOUND;
+
+	ExFreePoolWithTag(systemRootVolumePath.Buffer, MODULE_TAG);
+
+	return Status;
+}
+
+#define SYS_ROOT_SYSTEM32 L"\\SystemRoot\\System32"
+#define DLL_NAME	L"kdll.dll"
+#define CSRSS_PROC_PREFIX L"csrss.exe"
 
 NTSTATUS InjectDllWorker(PINJECT_BLOCK Inject)
 {
 
-	UNICODE_STRING ProcPrefix = RTL_CONSTANT_STRING(L"csrss.exe");
-	UNICODE_STRING DllPath = RTL_CONSTANT_STRING(L"\\SystemRoot\\System32");
-	UNICODE_STRING DllName = RTL_CONSTANT_STRING(L"kdll.dll");
-	UNICODE_STRING DllFilePath = RTL_CONSTANT_STRING(L"\\SystemRoot\\System32\\kdll.dll");
-	UNICODE_STRING SystemRootLink = RTL_CONSTANT_STRING(L"\\SystemRoot");
-	UNICODE_STRING C_Drive = RTL_CONSTANT_STRING(L"\\GLOBAL??\\C:");
-	UNICODE_STRING DevLink = RTL_CONSTANT_STRING(L"\\Device\\Harddisk1\\Partition1\\Windows");
-
+	UNICODE_STRING ProcPrefix = RTL_CONSTANT_STRING(CSRSS_PROC_PREFIX);
+	UNICODE_STRING DllPathLink = RTL_CONSTANT_STRING(SYS_ROOT_SYSTEM32);
+	UNICODE_STRING DllFilePath = RTL_CONSTANT_STRING(SYS_ROOT_SYSTEM32 L"\\" DLL_NAME);
+	UNICODE_STRING DllName = RTL_CONSTANT_STRING(DLL_NAME);
+	UNICODE_STRING DllPath = { 0, 0, NULL };
 	NTSTATUS Status;
+	BOOLEAN bDllExists = FALSE;
 
-	ResolveSymLink(&SystemRootLink, NULL);
-	ResolveSymLink(&C_Drive, NULL);
-	ResolveSymLink(&DevLink, NULL);
-
-	Status = InjectDllDrop(&DllFilePath);
+	Status = ResolveSystemRootPathToUmPath(&DllPathLink, &DllPath);
 	if (!NT_SUCCESS(Status)) {
-		KLog(LError, "InjectDllDrop failed with err=%x", Status);
+		KLog(LError, "ResolveSystemRootPathToUmPath error=%x", Status);
 		return Status;
 	}
+	
+	KLog(LInfo, "DllPath resolved=%wZ", DllPath);
 
-	return InjectFindAllProcessesAndInjectDll(&ProcPrefix, &DllPath, &DllName);
+	Status = InjectDllCheckAlreadyExists(&DllFilePath, &bDllExists);
+	if (!NT_SUCCESS(Status)) {
+		KLog(LInfo, "InjectDllCheckAlreadyExists failed with err=%x", Status);
+	}
+
+	KLog(LInfo, "DllPath resolved=%wZ, bDllExists=%d", DllPath, bDllExists);
+	
+	if (!bDllExists) {
+		Status = InjectDllDrop(&DllFilePath);
+		if (!NT_SUCCESS(Status)) {
+			KLog(LError, "InjectDllDrop failed with err=%x", Status);
+			goto cleanup;
+		}
+	}
+
+	Status = InjectFindAllProcessesAndInjectDll(&ProcPrefix, &DllPath, &DllName);
+
+cleanup:
+	if (DllPath.Buffer != NULL)
+		ExFreePoolWithTag(DllPath.Buffer, MODULE_TAG);
+
+	return Status;
 }
 
 
@@ -657,7 +1019,7 @@ NTSTATUS
 	}
 
 	TimerDueTime.QuadPart = 0;
-	KeSetTimerEx(&Inject->Timer, TimerDueTime, 5000, &Inject->TimerDpc);
+	KeSetTimerEx(&Inject->Timer, TimerDueTime, 5*60*1000, &Inject->TimerDpc);//3min
 	return STATUS_SUCCESS;
 
 start_failed:
