@@ -8,6 +8,7 @@ typedef struct _INJECT_INFO {
 	ULONG		ApcQueuedCount;
 	ULONG_PTR	Inited;
 	ULONG_PTR	Loaded;
+	PVOID		hModule;
 } INJECT_INFO, *PINJECT_INFO;
 
 typedef struct _INJECT_BLOCK {

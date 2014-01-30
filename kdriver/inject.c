@@ -230,12 +230,13 @@ int
 	KeStackAttachProcess(Process, &ApcState);
 	Entry->InjectInfo.Inited = pStubData->Inited;
 	Entry->InjectInfo.Loaded = pStubData->Loaded;
+	Entry->InjectInfo.hModule = pStubData->hModule;
 	KeUnstackDetachProcess(&ApcState);
 
 	PsReleaseProcessExitSynchronization(Process);
 
-	KLog(LInfo, "entry=%p proc=%p stub inited=%p", Entry, Process, Entry->InjectInfo.Inited);
-	KLog(LInfo, "entry=%p proc=%p dll loaded=%p", Entry, Process, Entry->InjectInfo.Loaded);
+	KLog(LInfo, "entry=%p proc=%p stub inited=%p, loaded=%p, hMod=%p", 
+		Entry, Process, Entry->InjectInfo.Inited, Entry->InjectInfo.Loaded, Entry->InjectInfo.hModule);
 
 	return 0;
 
