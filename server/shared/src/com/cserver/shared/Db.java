@@ -104,8 +104,10 @@ public class Db {
 		List<String> sList = jedis.lrange(host.hostId + ":keyBrdEvents", start, end);
 		List<Long> lList = new ArrayList<Long>();
 		
-		if (sList.size() == 1) {
-			lList.add(Long.parseLong(sList.get(0)));
+		if (sList.size() <= 1) {
+			for (String v : sList) {
+				lList.add(Long.parseLong(v));
+			}
 		} else {
 			KeyBrdEvent first = hostKeybrdEventObject(host, Long.parseLong(sList.get(0)));
 			for (String key : sList) {
