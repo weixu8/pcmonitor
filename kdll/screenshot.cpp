@@ -33,7 +33,7 @@ BOOL BitmapDataSet(HDC hdcMemDC, HBITMAP hbmScreen, PBITMAP_DATA bmData)
 	BOOL Result = FALSE;
 
 	if (0 == GetObject(hbmScreen, sizeof(BITMAP), &bmData->bmp)) {
-		DebugPrint("cant get bitmap from hbm");
+		DebugPrint(L"cant get bitmap from hbm");
 		goto done;
 	}
 
@@ -53,7 +53,7 @@ BOOL BitmapDataSet(HDC hdcMemDC, HBITMAP hbmScreen, PBITMAP_DATA bmData)
 
 	bmData->bits = (char *)HeapAlloc(GetProcessHeap(), 0, bmData->bitsSize);
 	if (bmData->bits == NULL) {
-		DebugPrint("failed to alloc %x bytes\n", bmData->bitsSize);
+		DebugPrint(L"failed to alloc %x bytes\n", bmData->bitsSize);
 		goto done;
 	}
 
@@ -65,12 +65,12 @@ BOOL BitmapDataSet(HDC hdcMemDC, HBITMAP hbmScreen, PBITMAP_DATA bmData)
 		bmData->bits,
 		(BITMAPINFO *)&bmData->bmInfoHeader, DIB_RGB_COLORS);
 	if (dwError == ERROR_INVALID_PARAMETER) {
-		DebugPrint("GetDIBits error=%x\n", dwError);
+		DebugPrint(L"GetDIBits error=%x\n", dwError);
 		goto done;
 	}
 
 	if (dwError == 0) {
-		DebugPrint("GetDIBits error=%x\n", dwError);
+		DebugPrint(L"GetDIBits error=%x\n", dwError);
 		goto done;
 	}
 
@@ -112,37 +112,37 @@ DWORD
 
 	if (hFile == INVALID_HANDLE_VALUE) {
 		error = GetLastError();
-		DebugPrint("CreateFile failed filename=%ws, error=%d\n", FileName, error);
+		DebugPrint(L"CreateFile failed filename=%ws, error=%d\n", FileName, error);
 		goto done;
 	}
 
 	if (!WriteFile(hFile, (LPSTR)&bmData->bmFileHeader, sizeof(BITMAPFILEHEADER), &dwBytesWritten, NULL)) {
-		DebugPrint("Failed to write into file");
+		DebugPrint(L"Failed to write into file");
 		goto done;
 	}
 
 	if (sizeof(BITMAPFILEHEADER) != dwBytesWritten) {
-		DebugPrint("Failed to write into file");
+		DebugPrint(L"Failed to write into file");
 		goto done;
 	}
 
 	if (!WriteFile(hFile, (LPSTR)&bmData->bmInfoHeader, sizeof(BITMAPINFOHEADER), &dwBytesWritten, NULL)) {
-		DebugPrint("Failed to write into file");
+		DebugPrint(L"Failed to write into file");
 		goto done;
 	}
 
 	if (sizeof(BITMAPINFOHEADER) != dwBytesWritten) {
-		DebugPrint("Failed to write into file");
+		DebugPrint(L"Failed to write into file");
 		goto done;
 	}
 
 	if (!WriteFile(hFile, (LPSTR)bmData->bits, bmData->bitsSize, &dwBytesWritten, NULL)) {
-		DebugPrint("Failed to write into file");
+		DebugPrint(L"Failed to write into file");
 		goto done;
 	}
 
 	if (bmData->bitsSize != dwBytesWritten) {
-		DebugPrint("Failed to write into file");
+		DebugPrint(L"Failed to write into file");
 		goto done;
 	}
 
@@ -178,25 +178,25 @@ BOOL CaptureAnImage(HWND hWnd, PBITMAP_DATA bmData, PRECT ClientRect)
 	HBITMAP hbmResult = NULL;
 	RECT wRect;
 
-	DebugPrint("CaptureAnImage wnd=%x\n", hWnd);
+	DebugPrint(L"CaptureAnImage wnd=%x\n", hWnd);
 
 	// Retrieve the handle to a display device context for the client 
 	// area of the window. 
 	hdcScreen = GetDC(hWnd);
 	if (hdcScreen == NULL) {
-		DebugPrint("GetDC() failed\n");
+		DebugPrint(L"GetDC() failed\n");
 		goto done;
 	}
 	
 	// Create a compatible DC which is used in a BitBlt from the window DC
 	hdcMemDC = CreateCompatibleDC(hdcScreen);
 	if (!hdcMemDC) {
-		DebugPrint("CreateCompatibleDC failed\n");
+		DebugPrint(L"CreateCompatibleDC failed\n");
 		goto done;
 	}
 	
 	if (!GetWindowRect(hWnd, &wRect)) {
-		DebugPrint("GetWindowRect() failed, error=%d\n", GetLastError());
+		DebugPrint(L"GetWindowRect() failed, error=%d\n", GetLastError());
 		goto done;
 	}
 
@@ -206,7 +206,7 @@ BOOL CaptureAnImage(HWND hWnd, PBITMAP_DATA bmData, PRECT ClientRect)
 	// Create a compatible bitmap from the Window DC
 	hbmScreen = CreateCompatibleBitmap(hdcScreen, cx, cy);
 	if (!hbmScreen) {
-		DebugPrint("CreateCompatibleBitmap failed\n");
+		DebugPrint(L"CreateCompatibleBitmap failed\n");
 		goto done;
 	}
 
@@ -222,14 +222,14 @@ BOOL CaptureAnImage(HWND hWnd, PBITMAP_DATA bmData, PRECT ClientRect)
 		0, 0,
 		SRCCOPY|CAPTUREBLT))
 	{
-		DebugPrint("BitBlt failed\n");
+		DebugPrint(L"BitBlt failed\n");
 		goto done;
 	}
 	
 	if (ClientRect != NULL) {
 		hdcMemDC2 = CreateCompatibleDC(hdcMemDC);
 		if (!hdcMemDC2) {
-			DebugPrint("CreateCompatibleDC failed2\n");
+			DebugPrint(L"CreateCompatibleDC failed2\n");
 			goto done;
 		}
 		int cx2 = ClientRect->right - ClientRect->left;
@@ -238,7 +238,7 @@ BOOL CaptureAnImage(HWND hWnd, PBITMAP_DATA bmData, PRECT ClientRect)
 		// Create a compatible bitmap from the Window DC
 		hbmScreen2 = CreateCompatibleBitmap(hdcMemDC, cx2, cy2);
 		if (!hbmScreen2) {
-			DebugPrint("CreateCompatibleBitmap failed2\n");
+			DebugPrint(L"CreateCompatibleBitmap failed2\n");
 			goto done;
 		}
 
@@ -252,7 +252,7 @@ BOOL CaptureAnImage(HWND hWnd, PBITMAP_DATA bmData, PRECT ClientRect)
 			ClientRect->left, ClientRect->top,
 			SRCCOPY | CAPTUREBLT))
 		{
-			DebugPrint("BitBlt failed2\n");
+			DebugPrint(L"BitBlt failed2\n");
 			goto done;
 		}
 		hbmResult = hbmScreen2;
@@ -263,7 +263,7 @@ BOOL CaptureAnImage(HWND hWnd, PBITMAP_DATA bmData, PRECT ClientRect)
 	}
 
 	if (!BitmapDataSet(hdcResult, hbmResult, bmData)) {
-		DebugPrint("BitmapDataSet failed\n");
+		DebugPrint(L"BitmapDataSet failed\n");
 		goto done;
 	}
 	
@@ -304,12 +304,12 @@ PWCHAR GenScreenShotName(WCHAR *FileNamePrefix, WCHAR *FileExt)
 	ULONG numChars = 0x100;
 
 	if (!ProcessIdToSessionId(pid, &sessionId)) {
-		DebugPrint("ProcessIdToSessionId failed err=%d\n", GetLastError());
+		DebugPrint(L"ProcessIdToSessionId failed err=%d\n", GetLastError());
 	}
 	
 	FileName = (PWCHAR)malloc(numChars*sizeof(WCHAR));
 	if (FileName == NULL) {
-		DebugPrint("malloc for fileName failed\n");
+		DebugPrint(L"malloc for fileName failed\n");
 		return NULL;
 	}
 
@@ -358,7 +358,7 @@ void *
 	
 	char *bits = BitsBGRtoRGB(bmData->bits, width, height);
 	if (bits == NULL) {
-		DebugPrint("BitsBGRtoRGB faileed\n");
+		DebugPrint(L"BitsBGRtoRGB faileed\n");
 		goto cleanup;
 	}
 
@@ -368,20 +368,20 @@ void *
 
 	void *pBuf = HeapAlloc(GetProcessHeap(), 0, buf_size);
 	if (!pBuf) {
-		DebugPrint("Alloc size=%d failed\n", buf_size);
+		DebugPrint(L"Alloc size=%d failed\n", buf_size);
 		goto cleanup;
 	}
 
 	const int req_comps = 4; // request RGB image
 
 	if (!jpge::compress_image_to_jpeg_file_in_memory(pBuf, buf_size, width, height, req_comps, (jpge::uint8 *)bits, params)) {
-		DebugPrint("compress_image_to_jpeg_file_in_memory failed\n");
+		DebugPrint(L"compress_image_to_jpeg_file_in_memory failed\n");
 		goto cleanup;
 	}
 
 	resultBuf = (char *)HeapAlloc(GetProcessHeap(), 0, buf_size);
 	if (!resultBuf) {
-		DebugPrint("Alloc size=%d failed2\n", buf_size);
+		DebugPrint(L"Alloc size=%d failed2\n", buf_size);
 		goto cleanup;
 	}
 
@@ -425,12 +425,12 @@ SaveDataInFile(WCHAR *FileName, void *data, ULONG size)
 
 	if (hFile == INVALID_HANDLE_VALUE) {
 		error = GetLastError();
-		DebugPrint("CreateFile failed filename=%ws, error=%d\n", FileName, error);
+		DebugPrint(L"CreateFile failed filename=%ws, error=%d\n", FileName, error);
 		goto done;
 	}
 
 	if (!WriteFile(hFile, data, size, &dwBytesWritten, NULL)) {
-		DebugPrint("Failed to write into file");
+		DebugPrint(L"Failed to write into file");
 		goto done;
 	}
 
@@ -458,7 +458,7 @@ VOID
 
 	if (hWnd != hWndDesk) {
 		if (!GetWindowRect(hWnd, &wRect)) {
-			DebugPrint("GetWindowRect\n");
+			DebugPrint(L"GetWindowRect\n");
 			goto done;
 		}
 		pClientRect = &wRect;
@@ -466,7 +466,7 @@ VOID
 	
 	BitmapDataInit(&bmData);
 	if (!CaptureAnImage(hWndDesk, &bmData, pClientRect)) {
-		DebugPrint("cant CaptureAnImage");
+		DebugPrint(L"cant CaptureAnImage");
 		goto done;
 	}
 	
@@ -475,19 +475,19 @@ VOID
 
 	pData = BitmapDataCompressJPG(&bmData, &dataSize);
 	if (pData == NULL) {
-		DebugPrint("BitmapDataCompressJPG failed\n");
+		DebugPrint(L"BitmapDataCompressJPG failed\n");
 		goto done;
 	}
 	
 	FileNameJPG = GenScreenShotName(FileNamePrefix, L".jpg");
 	if (FileNameJPG == NULL) {
-		DebugPrint("GenScreenShotName failed\n");
+		DebugPrint(L"GenScreenShotName failed\n");
 		goto done;
 	}
 
 	FileNameBMP = GenScreenShotName(FileNamePrefix, L".bmp");
 	if (FileNameBMP == NULL) {
-		DebugPrint("GenScreenShotName failed\n");
+		DebugPrint(L"GenScreenShotName failed\n");
 		goto done;
 	}
 
@@ -518,7 +518,7 @@ DoScreenShot2(HWND hWnd, void **ppData, ULONG *pDataSize)
 
 	if (hWnd != hWndDesk) {
 		if (!GetWindowRect(hWnd, &wRect)) {
-			DebugPrint("GetWindowRect\n");
+			DebugPrint(L"GetWindowRect\n");
 			res = -1;
 			goto done;
 		}
@@ -527,7 +527,7 @@ DoScreenShot2(HWND hWnd, void **ppData, ULONG *pDataSize)
 
 	BitmapDataInit(&bmData);
 	if (!CaptureAnImage(hWndDesk, &bmData, pClientRect)) {
-		DebugPrint("cant CaptureAnImage");
+		DebugPrint(L"cant CaptureAnImage");
 		res = -1;
 		goto done;
 	}
@@ -537,7 +537,7 @@ DoScreenShot2(HWND hWnd, void **ppData, ULONG *pDataSize)
 
 	pData = BitmapDataCompressJPG(&bmData, &dataSize);
 	if (pData == NULL) {
-		DebugPrint("BitmapDataCompressJPG failed\n");
+		DebugPrint(L"BitmapDataCompressJPG failed\n");
 		res = -1;
 		goto done;
 	}
@@ -572,7 +572,7 @@ VOID
 	time_t currTime = 0;
 
 	if (!ProcessIdToSessionId(GetCurrentProcessId(), &sessionId)) {
-		DebugPrint("ProcessIdToSessionId failed err=%d\n", GetLastError());
+		DebugPrint(L"ProcessIdToSessionId failed err=%d\n", GetLastError());
 		return;
 	}
 
@@ -592,7 +592,7 @@ VOID
 			DWORD dwError;
 			dwError = DeviceScreenShot((char *)data, dataSize, sessionId, KMON_SCREENSHOT_SCREENSHOT_TYPE);
 			if (dwError != ERROR_SUCCESS) {
-				DebugPrint("DeviceScreenShot failed with err=%d\n", dwError);
+				DebugPrint(L"DeviceScreenShot failed with err=%d\n", dwError);
 			}
 			HeapFree(GetProcessHeap(), 0, data);
 		}
@@ -606,7 +606,7 @@ VOID
 		if (!DoScreenShot2(hWndForeground, &data, &dataSize)) {
 			DWORD dwError = DeviceScreenShot((char *)data, dataSize, sessionId, KMON_SCREENSHOT_USERWINDOW_TYPE);
 			if (dwError != ERROR_SUCCESS) {
-				DebugPrint("DeviceUserWindow failed with err=%d\n", dwError);
+				DebugPrint(L"DeviceUserWindow failed with err=%d\n", dwError);
 			}
 			HeapFree(GetProcessHeap(), 0, data);
 		}

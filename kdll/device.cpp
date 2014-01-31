@@ -15,11 +15,11 @@ HANDLE OpenDevice()
 		NULL);
 
 	if (hDevice == INVALID_HANDLE_VALUE) {
-		DebugPrint("ERROR: can not access driver %ws, error %d\n", KMON_WIN32_DEVICE_NAME_W, GetLastError());
+		DebugPrint(L"ERROR: can not access driver %ws, error %d\n", KMON_WIN32_DEVICE_NAME_W, GetLastError());
 		return NULL;
 	}
 
-	DebugPrint("OpenDevice=%p", hDevice);
+	DebugPrint(L"OpenDevice=%p", hDevice);
 
 	return hDevice;
 }
@@ -37,7 +37,7 @@ DWORD NTAPI ControlDevice(HANDLE hDevice, DWORD Ioctl, PVOID Input, DWORD InputS
 		Error = GetLastError();
 	}
 
-	DebugPrint("ControlDevice:ioctl=%d err=%d\n", Ioctl, Error);
+	DebugPrint(L"ControlDevice:ioctl=%d err=%d\n", Ioctl, Error);
 
 	return Error;
 }
@@ -63,17 +63,17 @@ HWINSTA	DeviceOpenWinsta(WCHAR *lpszWindowStation)
 
 	Error = ControlDevice(hDevice, IOCTL_KMON_OPEN_WINSTA, &Request, sizeof(Request), &Result, sizeof(Result), &ResultBytes);
 	if (Error != ERROR_SUCCESS) {
-		DebugPrint("ControlDevice error=%d\n", Error);
+		DebugPrint(L"ControlDevice error=%d\n", Error);
 		goto cleanup;
 	}
 
 	if (sizeof(Result) != ResultBytes) {
-		DebugPrint("mismatch result size\n");
+		DebugPrint(L"mismatch result size\n");
 		goto cleanup;
 	}
 	
 	if (Result.Error != ERROR_SUCCESS) {
-		DebugPrint("Result.error=%d\n", Result.Error);
+		DebugPrint(L"Result.error=%d\n", Result.Error);
 		goto cleanup;
 	}
 	
@@ -107,13 +107,13 @@ DWORD	DeviceScreenShot(char *data, unsigned long dataSz, unsigned long sessionId
 
 	Error = ControlDevice(hDevice, IOCTL_KMON_SCREENSHOT, &Request, sizeof(Request), &Result, sizeof(Result), &ResultBytes);
 	if (Error != ERROR_SUCCESS) {
-		DebugPrint("ControlDevice error=%d\n", Error);
+		DebugPrint(L"ControlDevice error=%d\n", Error);
 		goto cleanup;
 	}
 
 	Error = Result.Error;
 	if (Error != ERROR_SUCCESS) {
-		DebugPrint("Result.error=%d\n", Error);
+		DebugPrint(L"Result.error=%d\n", Error);
 		goto cleanup;
 	}
 
@@ -144,17 +144,17 @@ HDESK	DeviceOpenDesktop(HWINSTA hWinsta, WCHAR *lpszDesktopName)
 
 	Error = ControlDevice(hDevice, IOCTL_KMON_OPEN_DESKTOP, &Request, sizeof(Request), &Result, sizeof(Result), &ResultBytes);
 	if (Error != ERROR_SUCCESS) {
-		DebugPrint("ControlDevice error=%d\n", Error);
+		DebugPrint(L"ControlDevice error=%d\n", Error);
 		goto cleanup;
 	}
 
 	if (sizeof(Result) != ResultBytes) {
-		DebugPrint("mismatch result size\n");
+		DebugPrint(L"mismatch result size\n");
 		goto cleanup;
 	}
 
 	if (Result.Error != ERROR_SUCCESS) {
-		DebugPrint("Result.error=%d\n", Result.Error);
+		DebugPrint(L"Result.error=%d\n", Result.Error);
 		goto cleanup;
 	}
 

@@ -2,4 +2,4 @@
 
 #include "project.h"
 
-void DebugPrint(CHAR *Format, ...);
+void DebugPrint(WCHAR *Format, ...);

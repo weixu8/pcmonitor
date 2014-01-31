@@ -1,10 +1,10 @@
 #include "project.h"
 #include <stdio.h>
 
-void DebugPrint(CHAR *Format, ...)
+void DebugPrint(WCHAR *Format, ...)
 {
 	va_list argptr;
-	CHAR Buffer[256];
+	WCHAR Buffer[256];
 	INT nChars = 0;
 	DWORD pid = GetCurrentProcessId();
 	DWORD tid = GetCurrentThreadId();
@@ -13,11 +13,14 @@ void DebugPrint(CHAR *Format, ...)
 	ProcessIdToSessionId(pid, &sessionId);
 
 	va_start(argptr, Format);
-	nChars = _snprintf_s(Buffer, RTL_NUMBER_OF(Buffer), _TRUNCATE, "kdll.dll:s%d p%x t%x:", sessionId, pid, tid);
-	nChars = _vsnprintf_s(&Buffer[nChars], RTL_NUMBER_OF(Buffer) - nChars, _TRUNCATE, Format, argptr);
+	nChars = _snwprintf_s(Buffer, RTL_NUMBER_OF(Buffer), _TRUNCATE, L"kdll.dll:s%d p%x t%x:", sessionId, pid, tid);
+	nChars = _vsnwprintf_s(&Buffer[nChars], RTL_NUMBER_OF(Buffer) - nChars, _TRUNCATE, Format, argptr);
 
 	if (nChars > 0)	{
-		OutputDebugStringA(Buffer);
+		OutputDebugStringW(Buffer);
+	} else {
+		OutputDebugStringW(L"kdll.dll:FORMATING FAILED!!!");
 	}
+
 	va_end(argptr);
 }

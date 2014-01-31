@@ -50,7 +50,7 @@ BOOL GdiPlusSaveBitmapAsPng(HBITMAP hBmp, WCHAR *FileName)
 
 	image = Gdiplus::Bitmap::FromHBITMAP(hBmp, NULL);
 	if (image == NULL) {
-		DebugPrint("Failure: Gdiplus::FromHBITMAP failed\n");
+		DebugPrint(L"Failure: Gdiplus::FromHBITMAP failed\n");
 		goto done;
 	}
 
@@ -58,7 +58,7 @@ BOOL GdiPlusSaveBitmapAsPng(HBITMAP hBmp, WCHAR *FileName)
 	if (status == Gdiplus::Ok) {
 		Result = TRUE;
 	} else {
-		DebugPrint("Failure: Gdiplus::status = %d\n", status);
+		DebugPrint(L"Failure: Gdiplus::status = %d\n", status);
 	}
 
 done:
@@ -76,7 +76,7 @@ int GdiPlusStart()
 	Gdiplus::GdiplusStartupInput gdiplusStartupInput;
 	status = Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 	if (status != Gdiplus::Ok) {
-		DebugPrint("GdiplusStartup failed\n");
+		DebugPrint(L"GdiplusStartup failed\n");
 	}
 
 	return status;

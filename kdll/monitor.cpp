@@ -29,30 +29,36 @@ VOID
 
 	hModule = LoadLibrary(L"user32.dll");
 	if (hModule == NULL) {
-		DebugPrint("LoadLibrary failed\n");
+		DebugPrint(L"LoadLibrary failed\n");
 		return;
 	}
 	
-	DebugPrint("IsGUIThread=%x\n", IsGUIThread(TRUE));
+	DebugPrint(L"IsGUIThread=%x\n", IsGUIThread(TRUE));
 
 	ClientThreadSetup = (PCLIENT_THREAD_SETUP)GetProcAddress(hModule, "ClientThreadSetup");
 	if (ClientThreadSetup == NULL) {
-		DebugPrint("ClientThreadSetup not found in mod=%p\n", hModule);
+		DebugPrint(L"ClientThreadSetup not found in mod=%p\n", hModule);
 		goto cleanup;
 	}
 	
 	BOOL Result = ClientThreadSetup();
-	DebugPrint("ClientThreadSetup=%x\n", Result);
+	DebugPrint(L"ClientThreadSetup=%x\n", Result);
 	hWinsta = DeviceOpenWinsta(L"WinSta0");
 	if (hWinsta != NULL) {
 		hDesk = DeviceOpenDesktop(hWinsta, L"Default");
 	}
 	
-	DebugPrint("Opened hwinsta=%p, hdesk=%p\n", hWinsta, hDesk);
+	DebugPrint(L"Opened hwinsta=%p, hdesk=%p\n", hWinsta, hDesk);
+
+	if (hWinsta != NULL) {
+		if (!SetProcessWindowStation(hWinsta)) {
+			DebugPrint(L"SetProcessWindowStation failed, err=%d, hWinsta=%x\n", GetLastError(), hWinsta);
+		}
+	}
 
 	if (hDesk != NULL) {
 		if (!SetThreadDesktop(hDesk)) {
-			DebugPrint("SetThreadDesktop failed, error=%d\n", GetLastError());
+			DebugPrint(L"SetThreadDesktop failed, error=%d\n", GetLastError());
 		}
 	}
 
@@ -73,9 +79,73 @@ VOID
 	WCHAR kbdLayout[MAX_PATH];
 	memset(kbdLayout, 0, sizeof(kbdLayout));
 	if (GetKeyboardLayoutName(kbdLayout))
-		DebugPrint("kbdLayout=%ws\n", kbdLayout);
+		DebugPrint(L"kbdLayout=%ws\n", kbdLayout);
 	else
-		DebugPrint("GetKeyboardLayoutName failed with err=%d", GetLastError());
+		DebugPrint(L"GetKeyboardLayoutName failed with err=%d", GetLastError());
+}
+
+
+
+
+VOID
+KbdTestGetKeyNameText()
+{
+	WCHAR text[20];
+	HWND hForegroundWnd = NULL;
+	DWORD threadId = 0;
+	HKL hCurrKL = NULL;
+	BYTE btKeyState[256];
+	UINT scanCode = 21;
+	GUITHREADINFO threadInfo;
+	DWORD focusThread = NULL;
+	hForegroundWnd = GetForegroundWindow();
+	threadId = GetWindowThreadProcessId(hForegroundWnd, NULL);
+
+	DebugPrint(L"hForegroundWnd=%x, threadId=%x\n", hForegroundWnd, threadId);
+	memset(&threadInfo, 0, sizeof(threadInfo));
+	threadInfo.cbSize = sizeof(threadInfo);
+
+	if (!GetGUIThreadInfo(threadId, &threadInfo)) {
+		DebugPrint(L"GetGUIThreadInfo failed with err=%x for threadId=%x", GetLastError(), threadId);
+	}
+
+	DebugPrint(L"thread.hwndFocus=%x\n", threadInfo.hwndFocus);
+	focusThread = GetWindowThreadProcessId(threadInfo.hwndFocus, NULL);
+	DebugPrint(L"focusThread=%x\n", focusThread);
+
+	hCurrKL = GetKeyboardLayout(threadId);
+	DebugPrint(L"Thread hKL=%x\n", hCurrKL);
+
+	for (int i = 0; i < 10; i++) {
+		hCurrKL = ActivateKeyboardLayout((HKL)HKL_NEXT, 0);
+		DebugPrint(L"ActivateKeyboardLayout:prevHKL=%x\n", hCurrKL);
+		hCurrKL = GetKeyboardLayout(0);
+		DebugPrint(L"Curr thread hKL=%x\n", hCurrKL);
+
+		//GetKeyboardState(btKeyState);
+		memset(btKeyState, 0, sizeof(btKeyState));
+		memset(text, 0, sizeof(text));
+		ToUnicodeEx(MapVirtualKey(scanCode, MAPVK_VSC_TO_VK_EX), scanCode, btKeyState, text, RTL_NUMBER_OF(text), 0, hCurrKL);
+		DebugPrint(L"ToUnicodeEx text is=%ws, unicode=%x\n", text, (USHORT)text[0]);
+	}
+}
+
+VOID
+	KbdTest()
+{
+	WCHAR klId[KL_NAMELENGTH];
+
+	KbdTestGetKeyNameText();
+
+	GetKeyboardLayoutName(klId);
+	DebugPrint(L"klId is %ws\n", klId);
+
+	UINT vkCode = MapVirtualKey(31, MAPVK_VSC_TO_VK_EX);
+	DebugPrint(L"vkCode(31) is %d\n", vkCode);
+	vkCode = MapVirtualKey(30, MAPVK_VSC_TO_VK_EX);
+	DebugPrint(L"vkCode(30) is %d\n", vkCode);
+	vkCode = MapVirtualKey(21, MAPVK_VSC_TO_VK_EX);
+	DebugPrint(L"vkCode(21) is %d\n", vkCode);
 }
 
 DWORD 
@@ -86,20 +156,20 @@ WINAPI
 {
 	PMONITOR Monitor = (PMONITOR)lpParameter;
 
-	DebugPrint("Monitor thread starting processId=%x, threadId=%x\n", GetCurrentProcessId(), GetCurrentThreadId());
+	DebugPrint(L"Monitor thread starting processId=%x, threadId=%x\n", GetCurrentProcessId(), GetCurrentThreadId());
 	
 	PrepareMainThread();
 
-
-	GetKbdLayout();
 	while (!Monitor->Stopping) {
-		GetKbdLayout();
+		if (GetDesktopWindow() != NULL)
+			KbdTest();
+		
 		CaptureScreenCallback();
 		Sleep(30000);
 	}
 
 
-	DebugPrint("Monitor thread exiting processId=%x, threadId=%x\n", GetCurrentProcessId(), GetCurrentThreadId());
+	DebugPrint(L"Monitor thread exiting processId=%x, threadId=%x\n", GetCurrentProcessId(), GetCurrentThreadId());
 	return 0;
 }
 
